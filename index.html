@@ -1,0 +1,2787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gap & Flush Sketcher - Presentation-Style Edit, Move & CAD Tools</title>
+  <style>
+    :root {
+      --bg: #1e1e24;
+      --panel: #282832;
+      --panel-border: #3b3b4a;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --primary-hover: #0ea5e9;
+      --accent: #f43f5e;
+      --success: #10b981;
+      --canvas-bg: #131317;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Header & Toolbar */
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--panel-border);
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      z-index: 10;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: #fff;
+    }
+
+    .brand-badge {
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--primary);
+      font-size: 0.72rem;
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-weight: 600;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(0,0,0,0.25);
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid var(--panel-border);
+    }
+
+    .btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+
+    .btn.active {
+      background: var(--primary);
+      color: #0f172a;
+      font-weight: 600;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+    }
+
+    .btn-action {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--panel-border);
+    }
+
+    /* Secondary Controls */
+    .sub-bar {
+      background: #212129;
+      border-bottom: 1px solid var(--panel-border);
+      padding: 6px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      flex-wrap: wrap;
+    }
+
+    .control-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .control-item label {
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .control-item input[type="range"] {
+      width: 75px;
+      accent-color: var(--primary);
+    }
+
+    .control-item select, .control-item input[type="number"] {
+      background: #18181f;
+      border: 1px solid var(--panel-border);
+      color: var(--text);
+      padding: 3px 6px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+
+    /* PowerPoint-Style Color Swatches Palette */
+    .color-swatches-box {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(0,0,0,0.22);
+      padding: 3px 6px;
+      border-radius: 6px;
+      border: 1px solid var(--panel-border);
+    }
+
+    .color-swatch {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.15s ease;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+
+    .color-swatch:hover {
+      transform: scale(1.15);
+    }
+
+    .color-swatch.active {
+      border-color: #ffffff;
+      transform: scale(1.15);
+      box-shadow: 0 0 6px rgba(255,255,255,0.7);
+    }
+
+    .custom-color-picker {
+      background: none;
+      border: none;
+      width: 22px;
+      height: 22px;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    /* Quick Thickness Preset Pills */
+    .thick-pills {
+      display: flex;
+      gap: 3px;
+    }
+
+    .t-pill {
+      background: #18181f;
+      border: 1px solid var(--panel-border);
+      color: var(--text);
+      font-size: 0.73rem;
+      padding: 2px 7px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+
+    .t-pill:hover, .t-pill.active {
+      background: var(--primary);
+      color: #000;
+      border-color: var(--primary);
+      font-weight: 600;
+    }
+
+    /* Workspace */
+    .workspace {
+      position: relative;
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    #drawingCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--canvas-bg);
+      cursor: crosshair;
+    }
+
+    /* Floating Status & Hint Overlay */
+    .overlay-hint {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(24, 24, 32, 0.92);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--panel-border);
+      padding: 8px 18px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      color: #cbd5e1;
+      pointer-events: none;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 20;
+    }
+
+    /* Floating PowerPoint-style Shape Toolbar */
+    #floatingMenu {
+      position: absolute;
+      display: none;
+      background: rgba(30, 30, 40, 0.95);
+      border: 1px solid var(--primary);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+      backdrop-filter: blur(8px);
+      padding: 5px 10px;
+      border-radius: 8px;
+      gap: 6px;
+      align-items: center;
+      z-index: 30;
+      font-size: 0.8rem;
+    }
+
+    #floatingMenu .f-btn {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid var(--panel-border);
+      color: #fff;
+      padding: 3px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.76rem;
+      transition: all 0.15s;
+    }
+
+    #floatingMenu .f-btn:hover {
+      background: var(--primary);
+      color: #000;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header Toolbar -->
+  <header>
+    <div class="brand">
+      <span>📐 Gap & Flush Draw</span>
+      <span class="brand-badge">PowerPoint-Style CAD</span>
+    </div>
+
+    <!-- Drawing Tools -->
+    <div class="toolbar-group">
+      <button class="btn" id="toolSelect" title="Select, Move, Resize, or Edit Points of any shape (like PowerPoint!) [Hotkey: V]">
+        👆 Select & Move
+      </button>
+      <button class="btn active" id="toolAutoSnap" title="Draw freehand sketch. Snaps automatically into straight flanges and clean bend radii.">
+        ⚡ Auto-Snap
+      </button>
+      <button class="btn" id="toolSmooth" title="Smooth freehand curves (jitter-free pen)">
+        〰️ Smooth
+      </button>
+      <button class="btn" id="toolLine" title="Straight Line with 0°/90°/45° snap">
+        📏 Line
+      </button>
+      <button class="btn" id="toolArrow" title="Engineering Arrow">
+        ➡️ Arrow
+      </button>
+      <button class="btn" id="toolTriangle" title="Datum Triangle symbol / marker">
+        🔺 Triangle
+      </button>
+      <button class="btn" id="toolDim" title="Measure Gap & Flush clearance between panels">
+        📐 Dimension
+      </button>
+    </div>
+
+    <!-- History & Export Actions -->
+    <div class="toolbar-group">
+      <button class="btn btn-action" id="btnUndo" title="Undo (Ctrl+Z)">↩️ Undo</button>
+      <button class="btn btn-action" id="btnRedo" title="Redo (Ctrl+Y)">↪️ Redo</button>
+      <button class="btn btn-action" id="btnDuplicate" title="Duplicate selected shape (Ctrl+D)">📋 Duplicate</button>
+      <button class="btn btn-action" id="btnClear" title="Clear all">🗑️ Clear</button>
+      <button class="btn btn-action" id="btnExportSVG" title="Export as clean vector SVG">💾 SVG</button>
+      <button class="btn btn-action" id="btnExportPNG" title="Export as high-res PNG">🖼️ PNG</button>
+    </div>
+  </header>
+
+  <!-- Secondary Parameters Bar -->
+  <div class="sub-bar">
+    <!-- PowerPoint-Style Color Swatches Palette -->
+    <div class="control-item">
+      <span>Color:</span>
+      <div class="color-swatches-box" id="paletteBox">
+        <span class="color-swatch active" style="background: #38bdf8;" data-color="#38bdf8" title="Cyan / Panel A"></span>
+        <span class="color-swatch" style="background: #fbbf24;" data-color="#fbbf24" title="Amber / Panel B"></span>
+        <span class="color-swatch" style="background: #f43f5e;" data-color="#f43f5e" title="Red / Datum"></span>
+        <span class="color-swatch" style="background: #10b981;" data-color="#10b981" title="Green / Dimension"></span>
+        <span class="color-swatch" style="background: #581c87;" data-color="#581c87" title="Dark Violet"></span>
+        <span class="color-swatch" style="background: #7c3aed;" data-color="#7c3aed" title="Violet"></span>
+        <span class="color-swatch" style="background: #9d174d;" data-color="#9d174d" title="Dark Pink"></span>
+        <span class="color-swatch" style="background: #be185d;" data-color="#be185d" title="Deep Rose Pink"></span>
+        <span class="color-swatch" style="background: #f97316;" data-color="#f97316" title="Orange"></span>
+        <span class="color-swatch" style="background: #ffffff;" data-color="#ffffff" title="White"></span>
+        <span class="color-swatch" style="background: #94a3b8;" data-color="#94a3b8" title="Gray"></span>
+        <span class="color-swatch" style="background: #000000;" data-color="#000000" title="Black"></span>
+        <input type="color" id="customColorPicker" class="custom-color-picker" value="#38bdf8" title="Custom Hex Color">
+      </div>
+    </div>
+
+    <!-- Master Stroke Thickness Control -->
+    <div class="control-item" style="background: rgba(56, 189, 248, 0.08); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(56, 189, 248, 0.2);">
+      <span style="color: #38bdf8; font-weight: 600;">Thickness:</span>
+      <input type="range" id="strokeSlider" min="1" max="24" value="4">
+      <span id="strokeVal" style="font-weight: 600; min-width: 26px; color: #fff;">4px</span>
+      <div class="thick-pills">
+        <span class="t-pill" onclick="setMasterThickness(1)">1px</span>
+        <span class="t-pill" onclick="setMasterThickness(2)">2px</span>
+        <span class="t-pill active" onclick="setMasterThickness(4)">4px</span>
+        <span class="t-pill" onclick="setMasterThickness(8)">8px</span>
+        <span class="t-pill" onclick="setMasterThickness(14)">14px</span>
+        <span class="t-pill" onclick="setMasterThickness(20)">20px</span>
+      </div>
+    </div>
+
+    <!-- CAD Dimension Controls -->
+    <div class="control-item" style="background: rgba(16, 185, 129, 0.1); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(16, 185, 129, 0.25);">
+      <span style="color: #10b981; font-weight: 600;">CAD Dim:</span>
+      <select id="dimTypeSelect" style="background: #18181f; color: #fff; font-size: 0.78rem;" title="Dimension Alignment Mode">
+        <option value="auto" selected>⚡ Auto CAD (Smart)</option>
+        <option value="aligned">📐 Aligned (True Distance)</option>
+        <option value="horizontal">↔️ Horizontal (Gap)</option>
+        <option value="vertical">↕️ Vertical (Flush)</option>
+        <option value="dual">📏 Dual Gap & Flush</option>
+      </select>
+      <select id="dimArrowDir" style="background: #18181f; color: #fff; font-size: 0.78rem;" title="Arrows pointing direction">
+        <option value="inward">🏹 Inward ( →| |← )</option>
+        <option value="outward">🏹 Outward ( |← →| )</option>
+        <option value="auto" selected>⚡ Auto Flip</option>
+      </select>
+      <label for="dimLineThick" style="margin-left: 2px;">Arrow/Meas Thk:</label>
+      <select id="dimLineThick" style="background: #18181f; color: #fff; font-size: 0.78rem;" title="Dimension line, arrow, and measurement line thickness">
+        <option value="1">1px</option>
+        <option value="1.5">1.5px</option>
+        <option value="2">2px</option>
+        <option value="2.5" selected>2.5px</option>
+        <option value="3">3px</option>
+        <option value="4">4px</option>
+        <option value="5">5px</option>
+        <option value="6">6px</option>
+      </select>
+      <label for="dimStubThick" style="margin-left: 2px;">Stub Thk:</label>
+      <select id="dimStubThick" style="background: #18181f; color: #fff; font-size: 0.78rem;" title="Stub / Extension line thickness">
+        <option value="auto" selected>Auto (Curve)</option>
+        <option value="1">1px</option>
+        <option value="1.5">1.5px</option>
+        <option value="2">2px</option>
+        <option value="3">3px</option>
+        <option value="4">4px</option>
+        <option value="5">5px</option>
+        <option value="6">6px</option>
+        <option value="8">8px</option>
+      </select>
+      <label for="dimScale" style="margin-left: 2px;">Scale:</label>
+      <input type="number" id="dimScale" value="10" min="1" max="100" step="1" style="width: 38px;" title="Pixels per 1 millimeter">
+      <span>px/mm</span>
+    </div>
+
+    <!-- Triangle Options -->
+    <div class="control-item">
+      <label for="triangleFilled">
+        <input type="checkbox" id="triangleFilled" checked>
+        Filled Triangle
+      </label>
+    </div>
+
+    <div class="control-item">
+      <label for="orthoSnap">
+        <input type="checkbox" id="orthoSnap" checked>
+        0°/90° Snap
+      </label>
+    </div>
+
+    <div class="control-item">
+      <label for="showGrid">
+        <input type="checkbox" id="showGrid" checked>
+        Grid
+      </label>
+    </div>
+  </div>
+
+  <!-- Canvas Workspace -->
+  <div class="workspace">
+    <canvas id="drawingCanvas"></canvas>
+    <div class="overlay-hint" id="statusHint">
+      💡 <b>Auto-Snap Mode:</b> Draw your cross-section profile rapidly. Snaps to clean CAD flanges and bend radii.
+    </div>
+
+    <!-- Floating PowerPoint-Style Shape Context Toolbar -->
+    <div id="floatingMenu">
+      <button class="f-btn" id="fBtnEditPoints" title="Toggle dragging individual corners/vertices of the sketch">📍 Edit Points</button>
+      <button class="f-btn" id="fBtnDimMode" style="display: none; color: #38bdf8;" title="Cycle dimension alignment mode">📐 Mode: Aligned</button>
+      <button class="f-btn" id="fBtnFlipDimArrows" style="display: none; color: #10b981;" title="Toggle inside vs outside pointing dimension arrows">🏹 Flip Arrows (In/Out)</button>
+      <button class="f-btn" id="fBtnDuplicate">📋 Duplicate</button>
+      <button class="f-btn" id="fBtnDelete" style="color: #f43f5e;">🗑️ Delete</button>
+    </div>
+  </div>
+
+  <script>
+    // --- Application State ---
+    const canvas = document.getElementById('drawingCanvas');
+    const ctx = canvas.getContext('2d');
+    const statusHint = document.getElementById('statusHint');
+    const floatingMenu = document.getElementById('floatingMenu');
+    const strokeSlider = document.getElementById('strokeSlider');
+    const strokeVal = document.getElementById('strokeVal');
+
+    // Current Tool: 'autosnap' | 'smooth' | 'line' | 'arrow' | 'triangle' | 'dimension' | 'select'
+    let currentTool = 'autosnap';
+    let strokeThickness = 4;
+    let activeColor = '#38bdf8';
+    let orthoSnap = true;
+    let triangleFilled = true;
+    let filletRadius = 8;
+    let showGrid = true;
+    let smoothingPower = 6;
+    let editPointsMode = false; // When true, allows moving individual vertices of polylines!
+
+    // CAD Dimension State
+    let dimType = 'auto'; // 'auto' | 'aligned' | 'horizontal' | 'vertical' | 'dual'
+    let dimArrowDir = 'auto'; // 'inward' | 'outward' | 'auto'
+    let dimLineWidth = 2.5; // Dimension arrow & measurement line thickness
+    let dimStubWidth = 'auto'; // Stub line thickness ('auto' or numeric px)
+    let dimScale = 10; // px per mm
+    let dimStep = 0; // 0 = pick P1, 1 = pick P2, 2 = pick standoff placement
+    let dimP1 = null;
+    let dimP2 = null;
+    let currentSnapCandidate = null; // { x, y, snapType }
+
+    // Shapes database
+    let shapes = [];
+    let undoStack = [];
+    let redoStack = [];
+
+    // Interaction State
+    let isInteracting = false;
+    let interactionMode = null; // 'draw' | 'moveShape' | 'resizeHandle' | 'moveEndpoint' | 'moveVertex'
+    let activeHandle = null; // 'nw', 'ne', 'se', 'sw', 'n', 'e', 's', 'w', 'p1', 'p2', or vertex index
+    let startPoint = null;
+    let currentPoints = [];
+    let selectedShape = null;
+    let mousePos = { x: 0, y: 0 };
+    let dragStartMouse = { x: 0, y: 0 };
+    let initialShapeSnapshot = null;
+
+    // Resize Canvas
+    function resizeCanvas() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+      render();
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    // --- PowerPoint-Style Color Palette ---
+    function setActiveColor(color) {
+      activeColor = color;
+      document.querySelectorAll('.color-swatch').forEach(sw => {
+        sw.classList.toggle('active', sw.dataset.color.toLowerCase() === color.toLowerCase());
+      });
+      document.getElementById('customColorPicker').value = color;
+
+      // If a shape is selected, immediately change its color like PowerPoint!
+      if (selectedShape) {
+        recordState();
+        selectedShape.color = color;
+        render();
+      }
+    }
+
+    document.querySelectorAll('.color-swatch').forEach(sw => {
+      sw.onclick = () => setActiveColor(sw.dataset.color);
+    });
+
+    document.getElementById('customColorPicker').oninput = (e) => {
+      setActiveColor(e.target.value);
+    };
+
+    // --- Master Thickness Control ---
+    function setMasterThickness(th) {
+      strokeThickness = th;
+      strokeSlider.value = th;
+      strokeVal.innerText = th + 'px';
+
+      document.querySelectorAll('.thick-pills .t-pill').forEach(p => {
+        p.classList.toggle('active', parseInt(p.innerText) === th);
+      });
+
+      // If a shape is selected, dynamically update its thickness like PowerPoint!
+      if (selectedShape) {
+        recordState();
+        selectedShape.thickness = th;
+        render();
+      }
+    }
+
+    strokeSlider.oninput = (e) => {
+      setMasterThickness(parseInt(e.target.value));
+    };
+
+    // --- Math & Bounding Box Helpers ---
+    function dist(p1, p2) {
+      return Math.hypot(p2.x - p1.x, p2.y - p1.y);
+    }
+
+    function perpendicularDistance(p, lineP1, lineP2) {
+      const dx = lineP2.x - lineP1.x;
+      const dy = lineP2.y - lineP1.y;
+      const mag = Math.hypot(dx, dy);
+      if (mag === 0) return dist(p, lineP1);
+      return Math.abs(dy * p.x - dx * p.y + lineP2.x * lineP1.y - lineP2.y * lineP1.x) / mag;
+    }
+
+    function snapPointOrtho(p1, p2, thresholdDegrees = 14) {
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+      const absAngle = Math.abs(angle);
+      const len = Math.hypot(dx, dy);
+
+      if (absAngle < thresholdDegrees || absAngle > (180 - thresholdDegrees)) {
+        return { x: p1.x + (dx >= 0 ? len : -len), y: p1.y };
+      }
+      if (Math.abs(absAngle - 90) < thresholdDegrees) {
+        return { x: p1.x, y: p1.y + (dy >= 0 ? len : -len) };
+      }
+      if (Math.abs(absAngle - 45) < thresholdDegrees || Math.abs(absAngle - 135) < thresholdDegrees) {
+        const signX = dx >= 0 ? 1 : -1;
+        const signY = dy >= 0 ? 1 : -1;
+        const avg = len * Math.SQRT1_2;
+        return { x: p1.x + signX * avg, y: p1.y + signY * avg };
+      }
+      return p2;
+    }
+
+    // --- CAD Object Snapping (OSNAP) & Arrow Helpers ---
+    function getSnapCandidate(pos, maxDist = 26) {
+      let best = null;
+      let minScore = maxDist;
+
+      for (const s of shapes) {
+        // Collect all point chains (polyline outer points, sheet metal inner points)
+        const pointChains = [];
+        if (s.points && s.points.length > 0) pointChains.push(s.points);
+        if (s.innerPoints && s.innerPoints.length > 0) pointChains.push(s.innerPoints);
+
+        for (const pts of pointChains) {
+          // 1. Vertices & Endpoints
+          for (let i = 0; i < pts.length; i++) {
+            const p = pts[i];
+            const d = dist(pos, p);
+            // Priority bonus of 6px for exact vertices
+            if (d - 6 < minScore) {
+              minScore = d - 6;
+              best = {
+                x: p.x,
+                y: p.y,
+                snapType: (i === 0 || i === pts.length - 1) ? 'Endpoint' : 'Vertex'
+              };
+            }
+          }
+
+          // 2. Segment Midpoints, Perpendiculars, and Edges
+          for (let i = 0; i < pts.length - 1; i++) {
+            const pA = pts[i];
+            const pB = pts[i + 1];
+            const segDx = pB.x - pA.x;
+            const segDy = pB.y - pA.y;
+            const segL2 = segDx * segDx + segDy * segDy;
+            if (segL2 < 1) continue;
+
+            // Midpoint
+            const midP = { x: (pA.x + pB.x) / 2, y: (pA.y + pB.y) / 2 };
+            const dMid = dist(pos, midP);
+            if (dMid - 3 < minScore) {
+              minScore = dMid - 3;
+              best = { x: midP.x, y: midP.y, snapType: 'Midpoint' };
+            }
+
+            // Perpendicular Snap from dimP1 (fundamental for gap & flush between panels!)
+            if (dimP1) {
+              const tPerp = ((dimP1.x - pA.x) * segDx + (dimP1.y - pA.y) * segDy) / segL2;
+              if (tPerp >= 0 && tPerp <= 1) {
+                const perpP = { x: pA.x + tPerp * segDx, y: pA.y + tPerp * segDy };
+                const dPerp = dist(pos, perpP);
+                if (dPerp - 5 < minScore) {
+                  minScore = dPerp - 5;
+                  best = { x: perpP.x, y: perpP.y, snapType: 'Perpendicular ⟂' };
+                }
+              }
+            }
+
+            // Nearest point on edge
+            const tNear = Math.max(0, Math.min(1, ((pos.x - pA.x) * segDx + (pos.y - pA.y) * segDy) / segL2));
+            const nearP = { x: pA.x + tNear * segDx, y: pA.y + tNear * segDy };
+            const dNear = dist(pos, nearP);
+            if (dNear < minScore) {
+              minScore = dNear;
+              best = { x: nearP.x, y: nearP.y, snapType: 'Edge' };
+            }
+          }
+        }
+
+        // Lines and arrows (exclude active dimension preview)
+        if (s.p1 && s.p2 && s.type !== 'dimension') {
+          const pA = s.p1, pB = s.p2;
+          const segDx = pB.x - pA.x, segDy = pB.y - pA.y;
+          const segL2 = segDx * segDx + segDy * segDy;
+          if (segL2 >= 1) {
+            const dA = dist(pos, pA);
+            if (dA - 6 < minScore) { minScore = dA - 6; best = { x: pA.x, y: pA.y, snapType: 'Endpoint' }; }
+            const dB = dist(pos, pB);
+            if (dB - 6 < minScore) { minScore = dB - 6; best = { x: pB.x, y: pB.y, snapType: 'Endpoint' }; }
+
+            const midP = { x: (pA.x + pB.x) / 2, y: (pA.y + pB.y) / 2 };
+            const dMid = dist(pos, midP);
+            if (dMid - 3 < minScore) { minScore = dMid - 3; best = { x: midP.x, y: midP.y, snapType: 'Midpoint' }; }
+
+            if (dimP1) {
+              const tPerp = ((dimP1.x - pA.x) * segDx + (dimP1.y - pA.y) * segDy) / segL2;
+              if (tPerp >= 0 && tPerp <= 1) {
+                const perpP = { x: pA.x + tPerp * segDx, y: pA.y + tPerp * segDy };
+                const dPerp = dist(pos, perpP);
+                if (dPerp - 5 < minScore) {
+                  minScore = dPerp - 5;
+                  best = { x: perpP.x, y: perpP.y, snapType: 'Perpendicular ⟂' };
+                }
+              }
+            }
+
+            const tNear = Math.max(0, Math.min(1, ((pos.x - pA.x) * segDx + (pos.y - pA.y) * segDy) / segL2));
+            const nearP = { x: pA.x + tNear * segDx, y: pA.y + tNear * segDy };
+            const dNear = dist(pos, nearP);
+            if (dNear < minScore) {
+              minScore = dNear;
+              best = { x: nearP.x, y: nearP.y, snapType: 'Edge' };
+            }
+          }
+        }
+      }
+      return best;
+    }
+
+    function renderSnapMarker(snap) {
+      if (!snap) return;
+      ctx.save();
+      ctx.strokeStyle = '#10b981';
+      ctx.fillStyle = 'rgba(16, 185, 129, 0.28)';
+      ctx.lineWidth = 2;
+
+      const x = snap.x, y = snap.y;
+      const type = snap.snapType || '';
+
+      if (type.includes('Perpendicular')) {
+        // Right-angle symbol ⟂
+        ctx.beginPath();
+        ctx.strokeRect(x - 6, y - 6, 12, 12);
+        ctx.moveTo(x - 6, y); ctx.lineTo(x + 6, y);
+        ctx.moveTo(x, y - 6); ctx.lineTo(x, y + 6);
+        ctx.stroke();
+      } else if (type === 'Midpoint') {
+        // Triangle ▲
+        ctx.beginPath();
+        ctx.moveTo(x, y - 7);
+        ctx.lineTo(x + 7, y + 6);
+        ctx.lineTo(x - 7, y + 6);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      } else if (type === 'Edge') {
+        // Hourglass ⧖
+        ctx.beginPath();
+        ctx.moveTo(x - 5, y - 5);
+        ctx.lineTo(x + 5, y - 5);
+        ctx.lineTo(x - 5, y + 5);
+        ctx.lineTo(x + 5, y + 5);
+        ctx.closePath();
+        ctx.stroke();
+      } else {
+        // Square for Endpoints and Vertices
+        ctx.strokeRect(x - 5, y - 5, 10, 10);
+        ctx.fillRect(x - 5, y - 5, 10, 10);
+      }
+
+      // Snap badge label
+      ctx.font = 'bold 10px sans-serif';
+      const label = `${snap.snapType}`;
+      const txtW = ctx.measureText(label).width;
+      ctx.fillStyle = 'rgba(19, 19, 23, 0.9)';
+      ctx.fillRect(x + 9, y - 14, txtW + 6, 14);
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + 9, y - 14, txtW + 6, 14);
+      ctx.fillStyle = '#10b981';
+      ctx.fillText(label, x + 12, y - 3);
+
+      ctx.restore();
+    }
+
+    function drawCadArrow(tipX, tipY, angle, color, len = 9, width = 3.6) {
+      ctx.save();
+      ctx.fillStyle = color;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1;
+      const bX = tipX - len * Math.cos(angle);
+      const bY = tipY - len * Math.sin(angle);
+      const perp = angle + Math.PI / 2;
+      const c1X = bX + width * Math.cos(perp);
+      const c1Y = bY + width * Math.sin(perp);
+      const c2X = bX - width * Math.cos(perp);
+      const c2Y = bY - width * Math.sin(perp);
+
+      ctx.beginPath();
+      ctx.moveTo(tipX, tipY);
+      ctx.lineTo(c1X, c1Y);
+      ctx.lineTo(c2X, c2Y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // --- CAD Smart Alignment & Geometry Helpers ---
+    function getEffectiveDimType(dim, mousePt) {
+      if (dim && dim.dimType && dim.dimType !== 'auto') return dim.dimType;
+      const p1 = dim ? dim.p1 : dimP1;
+      const p2 = dim ? dim.p2 : mousePt;
+      if (!p1 || !p2) return 'aligned';
+      const dx = Math.abs(p2.x - p1.x);
+      const dy = Math.abs(p2.y - p1.y);
+      if (dy < 6) return 'horizontal';
+      if (dx < 6) return 'vertical';
+      return 'aligned';
+    }
+
+    function getDimensionBadgePoint(dim) {
+      if (!dim || !dim.p1 || !dim.p2) return { x: 0, y: 0 };
+      const standoff = dim.standoff || dim.p2;
+      const type = getEffectiveDimType(dim, standoff);
+      const p1 = dim.p1, p2 = dim.p2;
+
+      if (type === 'horizontal') {
+        const midX = (standoff.x !== undefined) ? standoff.x : (p1.x + p2.x) / 2;
+        return { x: midX, y: standoff.y };
+      } else if (type === 'vertical') {
+        const midY = (standoff.y !== undefined) ? standoff.y : (p1.y + p2.y) / 2;
+        return { x: standoff.x, y: midY };
+      } else {
+        const dx = p2.x - p1.x, dy = p2.y - p1.y;
+        const L = Math.hypot(dx, dy) || 1;
+        const ux = dx / L, uy = dy / L;
+        const nx = -uy, ny = ux;
+        let h = (standoff.x - p1.x) * nx + (standoff.y - p1.y) * ny;
+        if (Math.abs(h) < 8) h = h >= 0 ? 25 : -25;
+        let s = (standoff.x - p1.x) * ux + (standoff.y - p1.y) * uy;
+        return { x: p1.x + h * nx + s * ux, y: p1.y + h * ny + s * uy };
+      }
+    }
+
+    function createAutoDimension(p1, p2) {
+      if (!p1 || !p2 || dist(p1, p2) < 3) return;
+
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const absDx = Math.abs(dx);
+      const absDy = Math.abs(dy);
+      const L = Math.hypot(dx, dy) || 1;
+
+      // Determine orientation
+      let effectiveType = dimType;
+      if (dimType === 'auto') {
+        if (absDy < 6) {
+          effectiveType = 'horizontal';
+        } else if (absDx < 6) {
+          effectiveType = 'vertical';
+        } else {
+          effectiveType = 'aligned';
+        }
+      }
+
+      // Compute presentation standoff offset (anchored below or outside)
+      const dpr = window.devicePixelRatio || 1;
+      const cWidth = canvas.width / dpr;
+      const cHeight = canvas.height / dpr;
+      let standoff;
+
+      if (effectiveType === 'horizontal') {
+        const midX = (p1.x + p2.x) / 2;
+        let sY = Math.max(p1.y, p2.y) + 38;
+        if (sY > cHeight - 40) sY = Math.min(p1.y, p2.y) - 38;
+        standoff = { x: midX, y: sY };
+      } else if (effectiveType === 'vertical') {
+        const midY = (p1.y + p2.y) / 2;
+        let sX = Math.max(p1.x, p2.x) + 38;
+        if (sX > cWidth - 40) sX = Math.min(p1.x, p2.x) - 38;
+        standoff = { x: sX, y: midY };
+      } else if (effectiveType === 'aligned') {
+        const midX = (p1.x + p2.x) / 2;
+        const midY = (p1.y + p2.y) / 2;
+        const nx = -dy / L, ny = dx / L;
+        const sgn = (ny > 0 || (ny === 0 && nx > 0)) ? 1 : -1;
+        standoff = { x: midX + 38 * sgn * nx, y: midY + 38 * sgn * ny };
+      } else {
+        // Dual
+        standoff = { x: Math.max(p1.x, p2.x) + 24, y: Math.min(p1.y, p2.y) - 24 };
+      }
+
+      const stubThkVal = (dimStubWidth === 'auto') ? strokeThickness : (parseFloat(dimStubWidth) || strokeThickness);
+
+      const newDim = {
+        id: Date.now(),
+        type: 'dimension',
+        p1: { x: p1.x, y: p1.y },
+        p2: { x: p2.x, y: p2.y },
+        standoff: standoff,
+        dimType: effectiveType, // Locks to concrete type so dragging NEVER flips it!
+        arrowDir: dimArrowDir,
+        lineWidth: dimLineWidth,
+        stubThickness: stubThkVal,
+        scale: dimScale,
+        color: activeColor === '#38bdf8' ? '#a855f7' : activeColor
+      };
+
+      recordState();
+      shapes.push(newDim);
+      selectedShape = newDim;
+      dimStep = 0;
+      dimP1 = null;
+      dimP2 = null;
+      isInteracting = false;
+      interactionMode = null;
+      statusHint.innerHTML = "✅ <b>CAD Dimension created!</b> Drag badge to adjust standoff or drag shape to move. (Press Esc to finish)";
+      render();
+    }
+
+    // Get Bounding Box of any shape
+    function getShapeBounds(shape) {
+      let pts = [];
+      if (shape.points) pts = pts.concat(shape.points);
+      if (shape.innerPoints) pts = pts.concat(shape.innerPoints);
+      if (shape.p1 && shape.p2) pts.push(shape.p1, shape.p2);
+
+      if (shape.type === 'triangle' && shape.p1 && shape.p2) {
+        const dx = shape.p2.x - shape.p1.x;
+        const dy = shape.p2.y - shape.p1.y;
+        const side = Math.hypot(dx, dy);
+        const baseHalf = side * 0.577;
+        const perpAngle = Math.atan2(dy, dx) + Math.PI / 2;
+        pts.push(
+          { x: shape.p1.x + baseHalf * Math.cos(perpAngle), y: shape.p1.y + baseHalf * Math.sin(perpAngle) },
+          { x: shape.p1.x - baseHalf * Math.cos(perpAngle), y: shape.p1.y - baseHalf * Math.sin(perpAngle) }
+        );
+      }
+
+      if (shape.type === 'dimension' && shape.p1 && shape.p2) {
+        const s = shape.standoff || shape.p2;
+        const type = getEffectiveDimType(shape, s);
+        pts.push(shape.p1, shape.p2);
+        if (type === 'horizontal') {
+          const xMin = Math.min(shape.p1.x, shape.p2.x);
+          const xMax = Math.max(shape.p1.x, shape.p2.x);
+          const midX = (s.x !== undefined) ? s.x : (xMin + xMax) / 2;
+          pts.push({ x: xMin, y: s.y }, { x: xMax, y: s.y }, { x: midX, y: s.y });
+        } else if (type === 'vertical') {
+          const yMin = Math.min(shape.p1.y, shape.p2.y);
+          const yMax = Math.max(shape.p1.y, shape.p2.y);
+          const midY = (s.y !== undefined) ? s.y : (yMin + yMax) / 2;
+          pts.push({ x: s.x, y: yMin }, { x: s.x, y: yMax }, { x: s.x, y: midY });
+        } else {
+          const dx = shape.p2.x - shape.p1.x;
+          const dy = shape.p2.y - shape.p1.y;
+          const L = Math.hypot(dx, dy) || 1;
+          const nx = -dy / L, ny = dx / L;
+          let h = (s.x - shape.p1.x) * nx + (s.y - shape.p1.y) * ny;
+          if (Math.abs(h) < 12) h = h >= 0 ? 25 : -25;
+          pts.push({ x: shape.p1.x + h * nx, y: shape.p1.y + h * ny });
+          pts.push({ x: shape.p2.x + h * nx, y: shape.p2.y + h * ny });
+        }
+      }
+
+      if (pts.length === 0) return null;
+
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      pts.forEach(p => {
+        if (p.x < minX) minX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y > maxY) maxY = p.y;
+      });
+
+      const pad = 6;
+      return {
+        x: minX - pad,
+        y: minY - pad,
+        width: Math.max(16, (maxX - minX) + pad * 2),
+        height: Math.max(16, (maxY - minY) + pad * 2),
+        minX: minX - pad,
+        minY: minY - pad,
+        maxX: maxX + pad,
+        maxY: maxY + pad
+      };
+    }
+
+    // Hit test shape
+    function isPointInShape(pt, shape, threshold = 18) {
+      if (shape.type === 'dimension' && shape.p1 && shape.p2) {
+        const s = shape.standoff || shape.p2;
+        const type = getEffectiveDimType(shape, s);
+        const p1 = shape.p1, p2 = shape.p2;
+
+        // 1. Measured endpoints segment
+        if (perpendicularDistance(pt, p1, p2) < threshold &&
+            dist(pt, p1) < dist(p1, p2) + threshold &&
+            dist(pt, p2) < dist(p1, p2) + threshold) {
+          return true;
+        }
+
+        if (type === 'horizontal') {
+          const yDim = s.y;
+          const xMin = Math.min(p1.x, p2.x);
+          const xMax = Math.max(p1.x, p2.x);
+          const midX = (s.x !== undefined) ? s.x : (xMin + xMax) / 2;
+          const lineLeft = Math.min(xMin, midX - 35);
+          const lineRight = Math.max(xMax, midX + 35);
+          // Check horizontal dimension line
+          if (Math.abs(pt.y - yDim) < threshold && pt.x >= lineLeft - threshold && pt.x <= lineRight + threshold) {
+            return true;
+          }
+          // Check text badge
+          if (dist(pt, { x: midX, y: yDim }) < 32) return true;
+          // Check extension stub lines
+          if (Math.abs(pt.x - p1.x) < threshold && pt.y >= Math.min(p1.y, yDim) - threshold && pt.y <= Math.max(p1.y, yDim) + threshold) return true;
+          if (Math.abs(pt.x - p2.x) < threshold && pt.y >= Math.min(p2.y, yDim) - threshold && pt.y <= Math.max(p2.y, yDim) + threshold) return true;
+          return false;
+        } else if (type === 'vertical') {
+          const xDim = s.x;
+          const yMin = Math.min(p1.y, p2.y);
+          const yMax = Math.max(p1.y, p2.y);
+          const midY = (s.y !== undefined) ? s.y : (yMin + yMax) / 2;
+          const lineTop = Math.min(yMin, midY - 20);
+          const lineBottom = Math.max(yMax, midY + 20);
+          // Check vertical dimension line
+          if (Math.abs(pt.x - xDim) < threshold && pt.y >= lineTop - threshold && pt.y <= lineBottom + threshold) {
+            return true;
+          }
+          // Check text badge
+          if (dist(pt, { x: xDim, y: midY }) < 32) return true;
+          // Check extension stub lines
+          if (Math.abs(pt.y - p1.y) < threshold && pt.x >= Math.min(p1.x, xDim) - threshold && pt.x <= Math.max(p1.x, xDim) + threshold) return true;
+          if (Math.abs(pt.y - p2.y) < threshold && pt.x >= Math.min(p2.x, xDim) - threshold && pt.x <= Math.max(p2.x, xDim) + threshold) return true;
+          return false;
+        } else {
+          // Aligned
+          const dx = p2.x - p1.x;
+          const dy = p2.y - p1.y;
+          const L = Math.hypot(dx, dy) || 1;
+          const nx = -dy / L, ny = dx / L;
+          let h = (s.x - p1.x) * nx + (s.y - p1.y) * ny;
+          if (Math.abs(h) < 12) h = h >= 0 ? 25 : -25;
+          const D1 = { x: p1.x + h * nx, y: p1.y + h * ny };
+          const D2 = { x: p2.x + h * nx, y: p2.y + h * ny };
+          if (perpendicularDistance(pt, D1, D2) < threshold &&
+              dist(pt, D1) < dist(D1, D2) + threshold + 25 &&
+              dist(pt, D2) < dist(D1, D2) + threshold + 25) {
+            return true;
+          }
+          const midX = (D1.x + D2.x) / 2;
+          const midY = (D1.y + D2.y) / 2;
+          if (dist(pt, { x: midX, y: midY }) < 32) return true;
+          return false;
+        }
+      }
+      if (shape.p1 && shape.p2) {
+        return perpendicularDistance(pt, shape.p1, shape.p2) < threshold &&
+               dist(pt, shape.p1) < dist(shape.p1, shape.p2) + threshold &&
+               dist(pt, shape.p2) < dist(shape.p1, shape.p2) + threshold;
+      }
+      if (shape.points) {
+        for (let i = 0; i < shape.points.length - 1; i++) {
+          if (perpendicularDistance(pt, shape.points[i], shape.points[i + 1]) < threshold) {
+            return true;
+          }
+        }
+        for (let p of shape.points) {
+          if (dist(pt, p) < threshold) return true;
+        }
+      }
+      if (shape.innerPoints) {
+        for (let p of shape.innerPoints) {
+          if (dist(pt, p) < threshold) return true;
+        }
+      }
+      return false;
+    }
+
+    // RDP Corner Detection for Auto-Snap
+    function rdpSimplify(points, epsilon) {
+      if (points.length <= 2) return points;
+      let maxDist = 0;
+      let index = 0;
+      const start = points[0];
+      const end = points[points.length - 1];
+
+      for (let i = 1; i < points.length - 1; i++) {
+        const d = perpendicularDistance(points[i], start, end);
+        if (d > maxDist) {
+          maxDist = d;
+          index = i;
+        }
+      }
+
+      if (maxDist > epsilon) {
+        const left = rdpSimplify(points.slice(0, index + 1), epsilon);
+        const right = rdpSimplify(points.slice(index), epsilon);
+        return left.slice(0, left.length - 1).concat(right);
+      } else {
+        return [start, end];
+      }
+    }
+
+    function recognizeAndSnapProfile(rawPoints) {
+      if (rawPoints.length < 3) return rawPoints;
+      const filtered = [rawPoints[0]];
+      for (let i = 1; i < rawPoints.length; i++) {
+        if (dist(rawPoints[i], filtered[filtered.length - 1]) > 3) {
+          filtered.push(rawPoints[i]);
+        }
+      }
+      if (filtered.length < 3) return filtered;
+
+      const rdpEpsilon = 8 + (10 - smoothingPower);
+      let corners = rdpSimplify(filtered, rdpEpsilon);
+
+      if (orthoSnap && corners.length > 1) {
+        const snapped = [corners[0]];
+        for (let i = 1; i < corners.length; i++) {
+          snapped.push(snapPointOrtho(snapped[i - 1], corners[i]));
+        }
+        corners = snapped;
+      }
+
+      if (corners.length >= 4 && dist(corners[0], corners[corners.length - 1]) < 22) {
+        corners[corners.length - 1] = { ...corners[0] };
+      }
+
+      return corners;
+    }
+
+    function smoothRawPoints(rawPoints) {
+      if (rawPoints.length < 3) return rawPoints;
+      const alpha = 0.25;
+      const smoothed = [{ ...rawPoints[0] }];
+      for (let i = 1; i < rawPoints.length; i++) {
+        const prev = smoothed[i - 1];
+        const curr = rawPoints[i];
+        smoothed.push({
+          x: prev.x + alpha * (curr.x - prev.x),
+          y: prev.y + alpha * (curr.y - prev.y)
+        });
+      }
+      return smoothed;
+    }
+
+    function computeOffsetPolyline(points, offsetDistance) {
+      if (points.length < 2) return [];
+      const offsetPoints = [];
+
+      for (let i = 0; i < points.length; i++) {
+        let normalX = 0;
+        let normalY = 0;
+
+        if (i === 0) {
+          const dx = points[1].x - points[0].x;
+          const dy = points[1].y - points[0].y;
+          const len = Math.hypot(dx, dy) || 1;
+          normalX = -dy / len;
+          normalY = dx / len;
+        } else if (i === points.length - 1) {
+          const dx = points[i].x - points[i - 1].x;
+          const dy = points[i].y - points[i - 1].y;
+          const len = Math.hypot(dx, dy) || 1;
+          normalX = -dy / len;
+          normalY = dx / len;
+        } else {
+          const dx1 = points[i].x - points[i - 1].x;
+          const dy1 = points[i].y - points[i - 1].y;
+          const len1 = Math.hypot(dx1, dy1) || 1;
+
+          const dx2 = points[i + 1].x - points[i].x;
+          const dy2 = points[i + 1].y - points[i].y;
+          const len2 = Math.hypot(dx2, dy2) || 1;
+
+          normalX = (-dy1 / len1 - dy2 / len2) / 2;
+          normalY = (dx1 / len1 + dx2 / len2) / 2;
+          const nlen = Math.hypot(normalX, normalY) || 1;
+          normalX /= nlen;
+          normalY /= nlen;
+        }
+
+        offsetPoints.push({
+          x: points[i].x + normalX * offsetDistance,
+          y: points[i].y + normalY * offsetDistance
+        });
+      }
+      return offsetPoints;
+    }
+
+    // --- Rendering Functions ---
+
+    function drawGrid() {
+      if (!showGrid) return;
+      const dpr = window.devicePixelRatio || 1;
+      const width = canvas.width / dpr;
+      const height = canvas.height / dpr;
+
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+      ctx.lineWidth = 1;
+      const gridSize = 20;
+
+      ctx.beginPath();
+      for (let x = 0; x < width; x += gridSize) {
+        ctx.moveTo(x, 0); ctx.lineTo(x, height);
+      }
+      for (let y = 0; y < height; y += gridSize) {
+        ctx.moveTo(0, y); ctx.lineTo(width, y);
+      }
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      ctx.beginPath();
+      for (let x = 0; x < width; x += gridSize * 5) {
+        ctx.moveTo(x, 0); ctx.lineTo(x, height);
+      }
+      for (let y = 0; y < height; y += gridSize * 5) {
+        ctx.moveTo(0, y); ctx.lineTo(width, y);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function renderLine(p1, p2, color, thickness) {
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = thickness;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function renderArrow(p1, p2, color, thickness) {
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = thickness;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const angle = Math.atan2(dy, dx);
+      const totalLen = Math.hypot(dx, dy);
+
+      const headLen = Math.max(12, thickness * 3.5);
+
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+
+      if (totalLen > 5) {
+        ctx.beginPath();
+        ctx.moveTo(p2.x, p2.y);
+        ctx.lineTo(
+          p2.x - headLen * Math.cos(angle - Math.PI / 7),
+          p2.y - headLen * Math.sin(angle - Math.PI / 7)
+        );
+        ctx.lineTo(
+          p2.x - (headLen * 0.75) * Math.cos(angle),
+          p2.y - (headLen * 0.75) * Math.sin(angle)
+        );
+        ctx.lineTo(
+          p2.x - headLen * Math.cos(angle + Math.PI / 7),
+          p2.y - headLen * Math.sin(angle + Math.PI / 7)
+        );
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function renderTriangle(p1, p2, color, thickness, isFilled) {
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.fillStyle = isFilled ? color : 'transparent';
+      ctx.lineWidth = thickness;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const side = Math.hypot(dx, dy);
+      const angle = Math.atan2(dy, dx);
+
+      const baseHalf = side * 0.577;
+      const perpAngle = angle + Math.PI / 2;
+      const baseP1 = {
+        x: p1.x + baseHalf * Math.cos(perpAngle),
+        y: p1.y + baseHalf * Math.sin(perpAngle)
+      };
+      const baseP2 = {
+        x: p1.x - baseHalf * Math.cos(perpAngle),
+        y: p1.y - baseHalf * Math.sin(perpAngle)
+      };
+
+      ctx.beginPath();
+      ctx.moveTo(p2.x, p2.y);
+      ctx.lineTo(baseP1.x, baseP1.y);
+      ctx.lineTo(baseP2.x, baseP2.y);
+      ctx.closePath();
+
+      if (isFilled) ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function renderPolyline(pts, color, radius, thickness) {
+      if (!pts || pts.length < 2) return;
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = thickness;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      ctx.beginPath();
+      if (radius <= 0 || pts.length === 2) {
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      } else {
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length - 1; i++) {
+          const pPrev = pts[i - 1];
+          const pCurr = pts[i];
+          const pNext = pts[i + 1];
+
+          const d1 = dist(pPrev, pCurr);
+          const d2 = dist(pCurr, pNext);
+          const r = Math.min(radius, d1 / 2.2, d2 / 2.2);
+
+          const startX = pCurr.x - ((pCurr.x - pPrev.x) / d1) * r;
+          const startY = pCurr.y - ((pCurr.y - pPrev.y) / d1) * r;
+          const endX = pCurr.x + ((pNext.x - pCurr.x) / d2) * r;
+          const endY = pCurr.y + ((pNext.y - pCurr.y) / d2) * r;
+
+          ctx.lineTo(startX, startY);
+          ctx.quadraticCurveTo(pCurr.x, pCurr.y, endX, endY);
+        }
+        ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function renderSmoothCurve(pts, color, thickness) {
+      if (!pts || pts.length < 2) return;
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = thickness;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length - 2; i++) {
+        const xc = (pts[i].x + pts[i + 1].x) / 2;
+        const yc = (pts[i].y + pts[i + 1].y) / 2;
+        ctx.quadraticCurveTo(pts[i].x, pts[i].y, xc, yc);
+      }
+      if (pts.length > 2) {
+        ctx.quadraticCurveTo(
+          pts[pts.length - 2].x,
+          pts[pts.length - 2].y,
+          pts[pts.length - 1].x,
+          pts[pts.length - 1].y
+        );
+      } else {
+        ctx.lineTo(pts[1].x, pts[1].y);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function renderSolidSection(outerPts, innerPts, color) {
+      if (!outerPts || !innerPts || outerPts.length < 2) return;
+      ctx.save();
+
+      ctx.beginPath();
+      ctx.moveTo(outerPts[0].x, outerPts[0].y);
+      for (let i = 1; i < outerPts.length; i++) ctx.lineTo(outerPts[i].x, outerPts[i].y);
+      ctx.lineTo(innerPts[innerPts.length - 1].x, innerPts[innerPts.length - 1].y);
+      for (let i = innerPts.length - 2; i >= 0; i--) ctx.lineTo(innerPts[i].x, innerPts[i].y);
+      ctx.closePath();
+
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.22)';
+      ctx.fill();
+
+      // 45° Crosshatch
+      ctx.save();
+      ctx.clip();
+      ctx.strokeStyle = color;
+      ctx.globalAlpha = 0.35;
+      ctx.lineWidth = 1;
+      const dpr = window.devicePixelRatio || 1;
+      const maxDim = Math.max(canvas.width, canvas.height) / dpr;
+      ctx.beginPath();
+      for (let offset = -maxDim; offset < maxDim * 2; offset += 10) {
+        ctx.moveTo(offset, 0);
+        ctx.lineTo(offset + maxDim, maxDim);
+      }
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function renderDimension(dim, isSelected = false) {
+      if (!dim || !dim.p1 || !dim.p2) return;
+      const p1 = dim.p1;
+      const p2 = dim.p2;
+      const standoff = dim.standoff || mousePos;
+      const type = getEffectiveDimType(dim, standoff);
+      const arrowDir = dim.arrowDir || dimArrowDir || 'auto';
+      const scale = dim.scale || dimScale || 10;
+      const color = dim.color || '#10b981';
+      const stubThick = (dim.stubThickness !== undefined) ? dim.stubThickness : (strokeThickness || 4);
+      const arrowThick = dim.lineWidth || dimLineWidth || 2.5;
+
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+
+      function drawStubLine(x1, y1, x2, y2) {
+        ctx.save();
+        ctx.lineCap = 'round';
+        // Subtle contrast outline so solid black is crisp and visible on dark canvas
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.lineWidth = stubThick + 1.5;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+
+        // Solid black stub line matching thickness of curves
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = stubThick;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      const arrowLen = Math.max(9, arrowThick * 3.8);
+      const arrowW = Math.max(3.6, arrowThick * 1.5);
+
+      if (type === 'aligned') {
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const L = Math.hypot(dx, dy);
+        if (L < 1) { ctx.restore(); return; }
+
+        const ux = dx / L;
+        const uy = dy / L;
+        const nx = -uy;
+        const ny = ux;
+
+        let h = (standoff.x - p1.x) * nx + (standoff.y - p1.y) * ny;
+        if (Math.abs(h) < 8) h = h >= 0 ? 25 : -25;
+        let s = (standoff.x - p1.x) * ux + (standoff.y - p1.y) * uy;
+
+        const D1 = { x: p1.x + h * nx, y: p1.y + h * ny };
+        const D2 = { x: p2.x + h * nx, y: p2.y + h * ny };
+        const sgn = Math.sign(h) || 1;
+
+        // Black stub lines matching curve thickness - ALWAYS anchored to snap points!
+        drawStubLine(p1.x, p1.y, D1.x + 5 * sgn * nx, D1.y + 5 * sgn * ny);
+        drawStubLine(p2.x, p2.y, D2.x + 5 * sgn * nx, D2.y + 5 * sgn * ny);
+
+        // Dimension line & arrows
+        const theta = Math.atan2(dy, dx);
+        const isOutward = (arrowDir === 'outward' || (arrowDir === 'auto' && L >= 48));
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = isSelected ? (arrowThick + 1) : arrowThick;
+
+        // Slide along dimension line
+        const badgePos = { x: p1.x + h * nx + s * ux, y: p1.y + h * ny + s * uy };
+        const valText = `${(L / scale).toFixed(1)} mm`;
+        ctx.font = 'bold 11px sans-serif';
+        const txtW = ctx.measureText(valText).width;
+        const halfSpan = txtW / 2 + 6;
+
+        const sMin = Math.min(0, s - halfSpan);
+        const sMax = Math.max(L, s + halfSpan);
+        const lineP1 = { x: p1.x + h * nx + sMin * ux, y: p1.y + h * ny + sMin * uy };
+        const lineP2 = { x: p1.x + h * nx + sMax * ux, y: p1.y + h * ny + sMax * uy };
+
+        ctx.beginPath();
+        if (isOutward) {
+          ctx.moveTo(lineP1.x, lineP1.y);
+          ctx.lineTo(lineP2.x, lineP2.y);
+          ctx.stroke();
+          drawCadArrow(D1.x, D1.y, theta + Math.PI, color, arrowLen, arrowW);
+          drawCadArrow(D2.x, D2.y, theta, color, arrowLen, arrowW);
+        } else {
+          ctx.moveTo(sMin < 0 ? lineP1.x : D1.x - 16 * ux, sMin < 0 ? lineP1.y : D1.y - 16 * uy);
+          ctx.lineTo(sMax > L ? lineP2.x : D2.x + 16 * ux, sMax > L ? lineP2.y : D2.y + 16 * uy);
+          ctx.stroke();
+          drawCadArrow(D1.x, D1.y, theta, color, arrowLen, arrowW);
+          drawCadArrow(D2.x, D2.y, theta + Math.PI, color, arrowLen, arrowW);
+        }
+
+        // Dimension Text Badge
+        const midX = badgePos.x;
+        const midY = badgePos.y;
+
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
+        ctx.fillRect(midX - txtW / 2 - 6, midY - 9, txtW + 12, 18);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = isSelected ? 1.5 : 1;
+        ctx.strokeRect(midX - txtW / 2 - 6, midY - 9, txtW + 12, 18);
+
+        ctx.fillStyle = color;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(valText, midX, midY);
+      } else if (type === 'horizontal') {
+        const dx = Math.abs(p2.x - p1.x);
+        const yDim = standoff.y;
+        const xMin = Math.min(p1.x, p2.x);
+        const xMax = Math.max(p1.x, p2.x);
+        const D1 = { x: xMin, y: yDim };
+        const D2 = { x: xMax, y: yDim };
+
+        // Black stub lines matching curve thickness - ALWAYS anchored to snap points!
+        const sgn1 = Math.sign(yDim - p1.y || 1);
+        const sgn2 = Math.sign(yDim - p2.y || 1);
+        drawStubLine(p1.x, p1.y, p1.x, yDim + 5 * sgn1);
+        drawStubLine(p2.x, p2.y, p2.x, yDim + 5 * sgn2);
+
+        // Gap value text badge position (free left or right sliding)
+        const midX = (standoff.x !== undefined) ? standoff.x : (D1.x + D2.x) / 2;
+        const midY = yDim;
+        const valText = `Gap: ${(dx / scale).toFixed(1)} mm`;
+
+        ctx.font = 'bold 11px sans-serif';
+        const txtW = ctx.measureText(valText).width;
+        const halfBadge = txtW / 2 + 6;
+
+        // Dimension line span - extends if badge is dragged to left or right outside stubs
+        const lineLeft = Math.min(xMin, midX - halfBadge);
+        const lineRight = Math.max(xMax, midX + halfBadge);
+
+        const isOutward = (arrowDir === 'outward' || (arrowDir === 'auto' && dx >= 48));
+        ctx.strokeStyle = color;
+        ctx.lineWidth = isSelected ? (arrowThick + 1) : arrowThick;
+
+        ctx.beginPath();
+        if (isOutward) {
+          ctx.moveTo(lineLeft, yDim);
+          ctx.lineTo(lineRight, yDim);
+          ctx.stroke();
+          drawCadArrow(D1.x, D1.y, Math.PI, color, arrowLen, arrowW);
+          drawCadArrow(D2.x, D2.y, 0, color, arrowLen, arrowW);
+        } else {
+          ctx.moveTo(lineLeft < D1.x ? lineLeft : D1.x - 16, yDim);
+          ctx.lineTo(lineRight > D2.x ? lineRight : D2.x + 16, yDim);
+          ctx.stroke();
+          drawCadArrow(D1.x, D1.y, 0, color, arrowLen, arrowW);
+          drawCadArrow(D2.x, D2.y, Math.PI, color, arrowLen, arrowW);
+        }
+
+        // Gap Value Badge
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
+        ctx.fillRect(midX - txtW / 2 - 6, midY - 9, txtW + 12, 18);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = isSelected ? 1.5 : 1;
+        ctx.strokeRect(midX - txtW / 2 - 6, midY - 9, txtW + 12, 18);
+
+        ctx.fillStyle = color;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(valText, midX, midY);
+      } else if (type === 'vertical') {
+        const dy = Math.abs(p2.y - p1.y);
+        const xDim = standoff.x;
+        const yMin = Math.min(p1.y, p2.y);
+        const yMax = Math.max(p1.y, p2.y);
+        const D1 = { x: xDim, y: yMin };
+        const D2 = { x: xDim, y: yMax };
+
+        // Black stub lines matching curve thickness - ALWAYS anchored to snap points!
+        const sgn1 = Math.sign(xDim - p1.x || 1);
+        const sgn2 = Math.sign(xDim - p2.x || 1);
+        drawStubLine(p1.x, p1.y, xDim + 5 * sgn1, p1.y);
+        drawStubLine(p2.x, p2.y, xDim + 5 * sgn2, p2.y);
+
+        // Flush value text badge position (free up or down sliding)
+        const midX = xDim;
+        const midY = (standoff.y !== undefined) ? standoff.y : (D1.y + D2.y) / 2;
+        const valText = `Flush: ${(dy / scale).toFixed(1)} mm`;
+
+        ctx.font = 'bold 11px sans-serif';
+        const txtW = ctx.measureText(valText).width;
+        const halfBadge = 10;
+
+        const lineTop = Math.min(yMin, midY - halfBadge);
+        const lineBottom = Math.max(yMax, midY + halfBadge);
+
+        const isOutward = (arrowDir === 'outward' || (arrowDir === 'auto' && dy >= 48));
+        ctx.strokeStyle = color;
+        ctx.lineWidth = isSelected ? (arrowThick + 1) : arrowThick;
+
+        ctx.beginPath();
+        if (isOutward) {
+          ctx.moveTo(xDim, lineTop);
+          ctx.lineTo(xDim, lineBottom);
+          ctx.stroke();
+          drawCadArrow(D1.x, D1.y, -Math.PI / 2, color, arrowLen, arrowW);
+          drawCadArrow(D2.x, D2.y, Math.PI / 2, color, arrowLen, arrowW);
+        } else {
+          ctx.moveTo(xDim, lineTop < D1.y ? lineTop : D1.y - 16);
+          ctx.lineTo(xDim, lineBottom > D2.y ? lineBottom : D2.y + 16);
+          ctx.stroke();
+          drawCadArrow(D1.x, D1.y, Math.PI / 2, color, arrowLen, arrowW);
+          drawCadArrow(D2.x, D2.y, -Math.PI / 2, color, arrowLen, arrowW);
+        }
+
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
+        ctx.fillRect(midX - txtW / 2 - 6, midY - 9, txtW + 12, 18);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = isSelected ? 1.5 : 1;
+        ctx.strokeRect(midX - txtW / 2 - 6, midY - 9, txtW + 12, 18);
+
+        ctx.fillStyle = color;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(valText, midX, midY);
+      } else if (type === 'dual') {
+        const dx = Math.abs(p2.x - p1.x);
+        const dy = Math.abs(p2.y - p1.y);
+        const gapMm = (dx / scale).toFixed(1);
+        const flushMm = (dy / scale).toFixed(1);
+        const cornerX = p2.x;
+        const cornerY = p1.y;
+
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+        ctx.setLineDash([4, 4]);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(cornerX, cornerY);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        const isOutwardH = (arrowDir === 'outward' || (arrowDir === 'auto' && dx >= 45));
+        ctx.strokeStyle = '#10b981';
+        ctx.beginPath();
+        ctx.moveTo(p1.x, cornerY);
+        ctx.lineTo(cornerX, cornerY);
+        ctx.stroke();
+        if (isOutwardH) {
+          drawCadArrow(Math.min(p1.x, cornerX), cornerY, Math.PI, '#10b981');
+          drawCadArrow(Math.max(p1.x, cornerX), cornerY, 0, '#10b981');
+        } else {
+          drawCadArrow(Math.min(p1.x, cornerX), cornerY, 0, '#10b981');
+          drawCadArrow(Math.max(p1.x, cornerX), cornerY, Math.PI, '#10b981');
+        }
+
+        const isOutwardV = (arrowDir === 'outward' || (arrowDir === 'auto' && dy >= 45));
+        ctx.strokeStyle = '#f43f5e';
+        ctx.beginPath();
+        ctx.moveTo(cornerX, cornerY);
+        ctx.lineTo(cornerX, p2.y);
+        ctx.stroke();
+        if (isOutwardV) {
+          drawCadArrow(cornerX, Math.min(cornerY, p2.y), -Math.PI / 2, '#f43f5e');
+          drawCadArrow(cornerX, Math.max(cornerY, p2.y), Math.PI / 2, '#f43f5e');
+        } else {
+          drawCadArrow(cornerX, Math.min(cornerY, p2.y), Math.PI / 2, '#f43f5e');
+          drawCadArrow(cornerX, Math.max(cornerY, p2.y), -Math.PI / 2, '#f43f5e');
+        }
+
+        ctx.font = 'bold 11px sans-serif';
+        const midX = (p1.x + cornerX) / 2;
+        ctx.fillStyle = '#10b981';
+        ctx.textAlign = 'center';
+        ctx.fillText(`Gap: ${gapMm} mm`, midX, cornerY - 8);
+
+        const midY = (cornerY + p2.y) / 2;
+        ctx.fillStyle = '#f43f5e';
+        ctx.textAlign = 'left';
+        ctx.fillText(`Flush: ${flushMm} mm`, cornerX + 8, midY + 4);
+      }
+
+      // Snap points pinned to curves (solid black dot matching stub line with crisp white rim)
+      [p1, p2].forEach(p => {
+        ctx.fillStyle = '#000000';
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      });
+
+      ctx.restore();
+    }
+
+    // --- PowerPoint-Style Selection Bounding Box & Handles ---
+    function renderSelectionGizmo(shape) {
+      ctx.save();
+
+      // If it's a line/arrow: show direct endpoint handles!
+      if ((shape.type === 'line' || shape.type === 'arrow') && shape.p1 && shape.p2) {
+        // Draw endpoints
+        [shape.p1, shape.p2].forEach((p, idx) => {
+          ctx.fillStyle = '#38bdf8';
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        });
+        ctx.restore();
+        return;
+      }
+
+      // If it's a dimension: show locked snap anchors, active standoff adjust handle, and dashed frame!
+      if (shape.type === 'dimension' && shape.p1 && shape.p2) {
+        // Pinned snap anchors (black dots with white ring - locked to curves, NOT draggable endpoints)
+        [shape.p1, shape.p2].forEach(p => {
+          ctx.fillStyle = '#000000';
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        });
+
+        // Standoff position handle on text badge (active drag handle)
+        const badgePt = getDimensionBadgePoint(shape);
+        ctx.save();
+        ctx.shadowColor = 'rgba(16, 185, 129, 0.6)';
+        ctx.shadowBlur = 8;
+        ctx.fillStyle = '#10b981';
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(badgePt.x, badgePt.y, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+
+        // Dashed bounding box
+        const b = getShapeBounds(shape);
+        if (b) {
+          ctx.strokeStyle = 'rgba(16, 185, 129, 0.55)';
+          ctx.setLineDash([4, 4]);
+          ctx.lineWidth = 1;
+          ctx.strokeRect(b.x, b.y, b.width, b.height);
+          ctx.setLineDash([]);
+        }
+        ctx.restore();
+        return;
+      }
+
+      // If in Edit Points mode: display all individual vertices as editable drag handles!
+      if (editPointsMode && shape.points) {
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        shape.points.forEach((p, i) => {
+          if (i === 0) ctx.moveTo(p.x, p.y);
+          else ctx.lineTo(p.x, p.y);
+        });
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        shape.points.forEach((p, i) => {
+          ctx.fillStyle = '#ffffff';
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        });
+        ctx.restore();
+        return;
+      }
+
+      // Standard PowerPoint Bounding Box with 8 Resize Handles
+      const b = getShapeBounds(shape);
+      if (!b) { ctx.restore(); return; }
+
+      // Selection Rectangle
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.strokeRect(b.x, b.y, b.width, b.height);
+      ctx.setLineDash([]);
+
+      // 8 Handles
+      const handles = getBoundingBoxHandles(b);
+      handles.forEach(h => {
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.rect(h.x - 4, h.y - 4, 8, 8);
+        ctx.fill();
+        ctx.stroke();
+      });
+
+      ctx.restore();
+    }
+
+    function getBoundingBoxHandles(b) {
+      return [
+        { id: 'nw', x: b.x, y: b.y },
+        { id: 'n',  x: b.x + b.width / 2, y: b.y },
+        { id: 'ne', x: b.x + b.width, y: b.y },
+        { id: 'e',  x: b.x + b.width, y: b.y + b.height / 2 },
+        { id: 'se', x: b.x + b.width, y: b.y + b.height },
+        { id: 's',  x: b.x + b.width / 2, y: b.y + b.height },
+        { id: 'sw', x: b.x, y: b.y + b.height },
+        { id: 'w',  x: b.x, y: b.y + b.height / 2 }
+      ];
+    }
+
+    // --- Main Render Loop ---
+    function render() {
+      const dpr = window.devicePixelRatio || 1;
+      ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+
+      drawGrid();
+
+      // Render all shapes
+      shapes.forEach(shape => {
+        const isSelected = selectedShape && selectedShape.id === shape.id;
+        const th = shape.thickness || 4;
+        if (shape.isSolid && shape.innerPoints) {
+          renderSolidSection(shape.points, shape.innerPoints, shape.color);
+        } else if (shape.type === 'line') {
+          renderLine(shape.p1, shape.p2, shape.color, th);
+        } else if (shape.type === 'arrow') {
+          renderArrow(shape.p1, shape.p2, shape.color, th);
+        } else if (shape.type === 'triangle') {
+          renderTriangle(shape.p1, shape.p2, shape.color, th, shape.filled);
+        } else if (shape.type === 'polyline') {
+          renderPolyline(shape.points, shape.color, shape.filletRadius ?? filletRadius, th);
+        } else if (shape.type === 'smooth') {
+          renderSmoothCurve(shape.points, shape.color, th);
+        } else if (shape.type === 'dimension') {
+          renderDimension(shape, isSelected);
+        }
+      });
+
+      // Render selection box & handles over selected shape
+      if (selectedShape) {
+        renderSelectionGizmo(selectedShape);
+      }
+
+      // Live drawing preview
+      if (isInteracting && interactionMode === 'draw') {
+        if (currentTool === 'line' && startPoint) {
+          const endP = orthoSnap ? snapPointOrtho(startPoint, mousePos) : mousePos;
+          renderLine(startPoint, endP, activeColor, strokeThickness);
+        } else if (currentTool === 'arrow' && startPoint) {
+          const endP = orthoSnap ? snapPointOrtho(startPoint, mousePos) : mousePos;
+          renderArrow(startPoint, endP, activeColor, strokeThickness);
+        } else if (currentTool === 'triangle' && startPoint) {
+          const endP = orthoSnap ? snapPointOrtho(startPoint, mousePos) : mousePos;
+          renderTriangle(startPoint, endP, activeColor, strokeThickness, triangleFilled);
+        } else if ((currentTool === 'autosnap' || currentTool === 'smooth') && currentPoints.length > 1) {
+          renderSmoothCurve(currentPoints, activeColor, strokeThickness);
+        }
+      }
+
+      // Live CAD Dimension Preview & Snap Marker
+      if (currentTool === 'dimension') {
+        const curP = currentSnapCandidate ? { x: currentSnapCandidate.x, y: currentSnapCandidate.y } : mousePos;
+        if (dimStep === 1 && dimP1) {
+          // Live tracking dashed line and distance while picking Point 2
+          ctx.save();
+          ctx.strokeStyle = '#10b981';
+          ctx.setLineDash([4, 4]);
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(dimP1.x, dimP1.y);
+          ctx.lineTo(curP.x, curP.y);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          const curL = Math.hypot(curP.x - dimP1.x, curP.y - dimP1.y);
+          const midX = (dimP1.x + curP.x) / 2;
+          const midY = (dimP1.y + curP.y) / 2;
+          const valTxt = `${(curL / dimScale).toFixed(1)} mm`;
+          ctx.font = 'bold 11px sans-serif';
+          const txtW = ctx.measureText(valTxt).width;
+          ctx.fillStyle = 'rgba(19, 19, 23, 0.9)';
+          ctx.fillRect(midX - txtW / 2 - 4, midY - 9, txtW + 8, 16);
+          ctx.strokeStyle = '#10b981';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(midX - txtW / 2 - 4, midY - 9, txtW + 8, 16);
+          ctx.fillStyle = '#10b981';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(valTxt, midX, midY);
+          ctx.restore();
+        } else if (dimStep === 2 && dimP1 && dimP2) {
+          // Dynamic dimension line following mouse pointer with smart auto-alignment
+          const effectiveType = getEffectiveDimType({ p1: dimP1, p2: dimP2, standoff: mousePos, dimType: dimType }, mousePos);
+          renderDimension({
+            p1: dimP1,
+            p2: dimP2,
+            standoff: mousePos,
+            dimType: effectiveType,
+            arrowDir: dimArrowDir,
+            scale: dimScale,
+            color: activeColor === '#38bdf8' ? '#10b981' : activeColor
+          }, false);
+        }
+
+        // Draw magnetic OSNAP green indicator
+        if (currentSnapCandidate) {
+          renderSnapMarker(currentSnapCandidate);
+        }
+      }
+
+      updateFloatingMenu();
+    }
+
+    // --- History & Undo ---
+    function recordState() {
+      undoStack.push(JSON.parse(JSON.stringify(shapes)));
+      redoStack = [];
+    }
+
+    function undo() {
+      if (undoStack.length === 0) return;
+      redoStack.push(JSON.parse(JSON.stringify(shapes)));
+      shapes = undoStack.pop();
+      selectedShape = null;
+      render();
+    }
+
+    function redo() {
+      if (redoStack.length === 0) return;
+      undoStack.push(JSON.parse(JSON.stringify(shapes)));
+      shapes = redoStack.pop();
+      selectedShape = null;
+      render();
+    }
+
+    function duplicateSelectedShape() {
+      if (!selectedShape) return;
+      recordState();
+      const copy = JSON.parse(JSON.stringify(selectedShape));
+      copy.id = Date.now();
+      const offset = 20;
+
+      if (copy.points) {
+        copy.points.forEach(p => { p.x += offset; p.y += offset; });
+      }
+      if (copy.innerPoints) {
+        copy.innerPoints.forEach(p => { p.x += offset; p.y += offset; });
+      }
+      if (copy.p1 && copy.p2) {
+        copy.p1.x += offset; copy.p1.y += offset;
+        copy.p2.x += offset; copy.p2.y += offset;
+      }
+      if (copy.standoff) {
+        copy.standoff.x += offset; copy.standoff.y += offset;
+      }
+
+      shapes.push(copy);
+      selectedShape = copy;
+      render();
+    }
+
+    // --- Interactive Mouse Handlers (PowerPoint-Style Move, Resize & Edit) ---
+    function getCanvasCoords(e) {
+      const rect = canvas.getBoundingClientRect();
+      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+
+    function getCursorForHandle(hId) {
+      if (hId === 'nw' || hId === 'se') return 'nwse-resize';
+      if (hId === 'ne' || hId === 'sw') return 'nesw-resize';
+      if (hId === 'n' || hId === 's') return 'ns-resize';
+      if (hId === 'e' || hId === 'w') return 'ew-resize';
+      return 'crosshair';
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      const pt = getCanvasCoords(e);
+      mousePos = pt;
+      dragStartMouse = { ...pt };
+
+      // In Select Tool: check handles, endpoints, or shape body
+      if (currentTool === 'select') {
+        if (selectedShape) {
+          // Check dimension adjustment (badge handle or clicking anywhere on the dimension)
+          if (selectedShape.type === 'dimension') {
+            const badgePt = getDimensionBadgePoint(selectedShape);
+            if (dist(pt, badgePt) < 22 || isPointInShape(pt, selectedShape)) {
+              isInteracting = true;
+              interactionMode = 'dragStandoff';
+              initialShapeSnapshot = JSON.parse(JSON.stringify(selectedShape));
+              recordState();
+              statusHint.innerHTML = "📐 <b>Adjusting Measurement:</b> Stub lines stay pinned to curves; adjusting arrow line & distance.";
+              return;
+            }
+          }
+
+          // Check line/arrow endpoints (only for lines and arrows, NEVER dimensions)
+          if (selectedShape.type !== 'dimension') {
+            if (selectedShape.p1 && dist(pt, selectedShape.p1) < 10) {
+              isInteracting = true;
+              interactionMode = 'moveEndpoint';
+              activeHandle = 'p1';
+              recordState();
+              return;
+            }
+            if (selectedShape.p2 && dist(pt, selectedShape.p2) < 10) {
+              isInteracting = true;
+              interactionMode = 'moveEndpoint';
+              activeHandle = 'p2';
+              recordState();
+              return;
+            }
+          }
+
+          // Check vertex handles in Edit Points mode
+          if (editPointsMode && selectedShape.points) {
+            for (let i = 0; i < selectedShape.points.length; i++) {
+              if (dist(pt, selectedShape.points[i]) < 10) {
+                isInteracting = true;
+                interactionMode = 'moveVertex';
+                activeHandle = i;
+                recordState();
+                return;
+              }
+            }
+          }
+
+          // Check 8 bounding box resize handles
+          const b = getShapeBounds(selectedShape);
+          if (b && !editPointsMode && selectedShape.type !== 'dimension' && selectedShape.type !== 'line' && selectedShape.type !== 'arrow') {
+            const handles = getBoundingBoxHandles(b);
+            for (let h of handles) {
+              if (dist(pt, h) < 10) {
+                isInteracting = true;
+                interactionMode = 'resizeHandle';
+                activeHandle = h.id;
+                initialShapeSnapshot = JSON.parse(JSON.stringify(selectedShape));
+                recordState();
+                return;
+              }
+            }
+          }
+
+          // Check if clicking inside current selected shape to MOVE it!
+          if (isPointInShape(pt, selectedShape)) {
+            if (selectedShape.type === 'dimension') {
+              isInteracting = true;
+              interactionMode = 'dragStandoff';
+              initialShapeSnapshot = JSON.parse(JSON.stringify(selectedShape));
+              recordState();
+              return;
+            }
+            isInteracting = true;
+            interactionMode = 'moveShape';
+            initialShapeSnapshot = JSON.parse(JSON.stringify(selectedShape));
+            recordState();
+            return;
+          }
+        }
+
+        // Hit-test other shapes to select them
+        let hit = null;
+        for (let i = shapes.length - 1; i >= 0; i--) {
+          if (isPointInShape(pt, shapes[i])) {
+            hit = shapes[i];
+            break;
+          }
+        }
+
+        selectedShape = hit;
+        editPointsMode = false;
+        if (hit) {
+          if (hit.type === 'dimension') {
+            isInteracting = true;
+            interactionMode = 'dragStandoff';
+            initialShapeSnapshot = JSON.parse(JSON.stringify(hit));
+            recordState();
+          } else {
+            isInteracting = true;
+            interactionMode = 'moveShape';
+            initialShapeSnapshot = JSON.parse(JSON.stringify(hit));
+            recordState();
+          }
+
+          // Sync toolbar color & thickness with selected shape
+          if (hit.color) setActiveColor(hit.color);
+          if (hit.thickness) setMasterThickness(hit.thickness);
+          if (hit.type === 'dimension') {
+            if (hit.arrowDir) {
+              dimArrowDir = hit.arrowDir;
+              document.getElementById('dimArrowDir').value = hit.arrowDir;
+            }
+            if (hit.lineWidth) {
+              dimLineWidth = hit.lineWidth;
+              document.getElementById('dimLineThick').value = hit.lineWidth;
+            }
+            if (hit.stubThickness !== undefined) {
+              dimStubWidth = String(hit.stubThickness);
+              const stubSelect = document.getElementById('dimStubThick');
+              if (stubSelect) {
+                // Check if exact option exists, otherwise keep or select closest
+                let hasOpt = Array.from(stubSelect.options).some(o => o.value == hit.stubThickness);
+                stubSelect.value = hasOpt ? String(hit.stubThickness) : 'auto';
+              }
+            }
+            if (hit.dimType) {
+              dimType = hit.dimType;
+              document.getElementById('dimTypeSelect').value = hit.dimType;
+            }
+            if (hit.scale) {
+              dimScale = hit.scale;
+              document.getElementById('dimScale').value = hit.scale;
+            }
+          }
+        }
+        render();
+        return;
+      }
+
+      // Drawing Modes
+      if (currentTool === 'autosnap' || currentTool === 'smooth') {
+        isInteracting = true;
+        interactionMode = 'draw';
+        currentPoints = [pt];
+        selectedShape = null;
+      } else if (currentTool === 'line' || currentTool === 'arrow' || currentTool === 'triangle') {
+        isInteracting = true;
+        interactionMode = 'draw';
+        startPoint = pt;
+        selectedShape = null;
+      } else if (currentTool === 'dimension') {
+        const snap = currentSnapCandidate ? { x: currentSnapCandidate.x, y: currentSnapCandidate.y } : pt;
+
+        // If at step 0: Check if clicking on an EXISTING dimension to select / move it!
+        if (dimStep === 0) {
+          let hitDim = null;
+          for (let i = shapes.length - 1; i >= 0; i--) {
+            if (shapes[i].type === 'dimension' && isPointInShape(pt, shapes[i])) {
+              hitDim = shapes[i];
+              break;
+            }
+          }
+          if (hitDim) {
+            selectedShape = hitDim;
+            // Always adjust standoff & gap value only! Stub lines stay strictly locked to curve snaps!
+            isInteracting = true;
+            interactionMode = 'dragStandoff';
+            initialShapeSnapshot = JSON.parse(JSON.stringify(hitDim));
+            dragStartMouse = { ...pt };
+            recordState();
+            statusHint.innerHTML = "✋ <b>Moving Gap Measurement:</b> Stub lines stay pinned to snaps; moving gap value freely.";
+            render();
+            return;
+          }
+
+          // Otherwise, start Step 1: Pick Point 1!
+          dimP1 = snap;
+          dimStep = 1;
+          isInteracting = true;
+          interactionMode = 'dimDrag';
+          statusHint.innerHTML = "📍 <b>Step 2/2:</b> Snap 2nd point to measure (automatically creates presentation lines & arrows). Press Esc to cancel.";
+          render();
+          return;
+        } else if (dimStep === 1) {
+          // Point 2 picked: instantly auto-create presentation lines & arrows!
+          if (dist(dimP1, snap) > 2) {
+            createAutoDimension(dimP1, snap);
+          }
+          return;
+        }
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      const pt = getCanvasCoords(e);
+      mousePos = pt;
+
+      if (currentTool === 'dimension') {
+        currentSnapCandidate = getSnapCandidate(pt);
+        render();
+      } else {
+        currentSnapCandidate = null;
+      }
+
+      // Update Cursor depending on hover in Select tool
+      if (currentTool === 'select' && !isInteracting) {
+        let cursor = 'default';
+        if (selectedShape) {
+          if (selectedShape.type === 'dimension') {
+            const badgePt = getDimensionBadgePoint(selectedShape);
+            if (dist(pt, badgePt) < 22 || isPointInShape(pt, selectedShape)) {
+              cursor = 'grab';
+            }
+          } else if ((selectedShape.p1 && dist(pt, selectedShape.p1) < 10) ||
+              (selectedShape.p2 && dist(pt, selectedShape.p2) < 10)) {
+            cursor = 'crosshair';
+          } else if (editPointsMode && selectedShape.points) {
+            for (let p of selectedShape.points) {
+              if (dist(pt, p) < 10) { cursor = 'pointer'; break; }
+            }
+          } else {
+            const b = getShapeBounds(selectedShape);
+            if (b) {
+              for (let h of getBoundingBoxHandles(b)) {
+                if (dist(pt, h) < 10) { cursor = getCursorForHandle(h.id); break; }
+              }
+              if (cursor === 'default' && isPointInShape(pt, selectedShape)) {
+                cursor = 'move';
+              }
+            }
+          }
+        }
+        if (cursor === 'default') {
+          for (let s of shapes) {
+            if (isPointInShape(pt, s)) { cursor = 'pointer'; break; }
+          }
+        }
+        canvas.style.cursor = cursor;
+      }
+
+      if (!isInteracting) return;
+
+      // Handle Dragging Standoff Position directly
+      if (interactionMode === 'dragStandoff' && selectedShape) {
+        if (initialShapeSnapshot && initialShapeSnapshot.standoff) {
+          const dx = pt.x - dragStartMouse.x;
+          const dy = pt.y - dragStartMouse.y;
+          selectedShape.standoff = {
+            x: initialShapeSnapshot.standoff.x + dx,
+            y: initialShapeSnapshot.standoff.y + dy
+          };
+        } else {
+          selectedShape.standoff = { x: pt.x, y: pt.y };
+        }
+        render();
+        return;
+      }
+
+      // Handle Moving the Shape (PowerPoint-Style Drag & Reposition)
+      if (interactionMode === 'moveShape' && selectedShape && initialShapeSnapshot) {
+        const dx = pt.x - dragStartMouse.x;
+        const dy = pt.y - dragStartMouse.y;
+
+        if (initialShapeSnapshot.points) {
+          selectedShape.points = initialShapeSnapshot.points.map(p => ({ x: p.x + dx, y: p.y + dy }));
+        }
+        if (initialShapeSnapshot.innerPoints) {
+          selectedShape.innerPoints = initialShapeSnapshot.innerPoints.map(p => ({ x: p.x + dx, y: p.y + dy }));
+        }
+        if (selectedShape.type !== 'dimension' && initialShapeSnapshot.p1 && initialShapeSnapshot.p2) {
+          selectedShape.p1 = { x: initialShapeSnapshot.p1.x + dx, y: initialShapeSnapshot.p1.y + dy };
+          selectedShape.p2 = { x: initialShapeSnapshot.p2.x + dx, y: initialShapeSnapshot.p2.y + dy };
+        }
+        if (initialShapeSnapshot.standoff) {
+          selectedShape.standoff = { x: initialShapeSnapshot.standoff.x + dx, y: initialShapeSnapshot.standoff.y + dy };
+        }
+        render();
+        return;
+      }
+
+      // Handle Moving Endpoints of Lines/Arrows
+      if (interactionMode === 'moveEndpoint' && selectedShape) {
+        if (activeHandle === 'p1') selectedShape.p1 = pt;
+        if (activeHandle === 'p2') selectedShape.p2 = pt;
+        render();
+        return;
+      }
+
+      // Handle Moving Individual Vertices (Edit Points mode)
+      if (interactionMode === 'moveVertex' && selectedShape && selectedShape.points) {
+        selectedShape.points[activeHandle] = pt;
+        if (selectedShape.isSolid) {
+          selectedShape.innerPoints = computeOffsetPolyline(selectedShape.points, sheetThickness);
+        }
+        render();
+        return;
+      }
+
+      // Handle Resizing with 8 Bounding Box Handles
+      if (interactionMode === 'resizeHandle' && selectedShape && initialShapeSnapshot) {
+        const initB = getShapeBounds(initialShapeSnapshot);
+        if (!initB || initB.width === 0 || initB.height === 0) return;
+
+        let scaleX = 1, scaleY = 1;
+        let originX = initB.x, originY = initB.y;
+
+        if (activeHandle === 'se') {
+          scaleX = (pt.x - initB.x) / initB.width;
+          scaleY = (pt.y - initB.y) / initB.height;
+          originX = initB.x; originY = initB.y;
+        } else if (activeHandle === 'nw') {
+          scaleX = (initB.maxX - pt.x) / initB.width;
+          scaleY = (initB.maxY - pt.y) / initB.height;
+          originX = initB.maxX; originY = initB.maxY;
+        } else if (activeHandle === 'ne') {
+          scaleX = (pt.x - initB.x) / initB.width;
+          scaleY = (initB.maxY - pt.y) / initB.height;
+          originX = initB.x; originY = initB.maxY;
+        } else if (activeHandle === 'sw') {
+          scaleX = (initB.maxX - pt.x) / initB.width;
+          scaleY = (pt.y - initB.y) / initB.height;
+          originX = initB.maxX; originY = initB.y;
+        } else if (activeHandle === 'e') {
+          scaleX = (pt.x - initB.x) / initB.width;
+          originX = initB.x; originY = initB.y;
+        } else if (activeHandle === 'w') {
+          scaleX = (initB.maxX - pt.x) / initB.width;
+          originX = initB.maxX; originY = initB.y;
+        } else if (activeHandle === 's') {
+          scaleY = (pt.y - initB.y) / initB.height;
+          originX = initB.x; originY = initB.y;
+        } else if (activeHandle === 'n') {
+          scaleY = (initB.maxY - pt.y) / initB.height;
+          originX = initB.x; originY = initB.maxY;
+        }
+
+        if (Math.abs(scaleX) < 0.05) scaleX = 0.05;
+        if (Math.abs(scaleY) < 0.05) scaleY = 0.05;
+
+        // Transform all points proportionally
+        if (initialShapeSnapshot.points) {
+          selectedShape.points = initialShapeSnapshot.points.map(p => ({
+            x: originX + (p.x - originX) * scaleX,
+            y: originY + (p.y - originY) * scaleY
+          }));
+        }
+        if (initialShapeSnapshot.innerPoints) {
+          selectedShape.innerPoints = initialShapeSnapshot.innerPoints.map(p => ({
+            x: originX + (p.x - originX) * scaleX,
+            y: originY + (p.y - originY) * scaleY
+          }));
+        }
+        if (initialShapeSnapshot.p1 && initialShapeSnapshot.p2) {
+          selectedShape.p1 = {
+            x: originX + (initialShapeSnapshot.p1.x - originX) * scaleX,
+            y: originY + (initialShapeSnapshot.p1.y - originY) * scaleY
+          };
+          selectedShape.p2 = {
+            x: originX + (initialShapeSnapshot.p2.x - originX) * scaleX,
+            y: originY + (initialShapeSnapshot.p2.y - originY) * scaleY
+          };
+        }
+        render();
+        return;
+      }
+
+      // Drawing interaction
+      if (interactionMode === 'draw') {
+        if (currentTool === 'autosnap' || currentTool === 'smooth') {
+          currentPoints.push(pt);
+        }
+        render();
+      }
+    });
+
+    canvas.addEventListener('mouseup', () => {
+      if (currentTool === 'dimension' && interactionMode === 'dimDrag') {
+        const snap = currentSnapCandidate ? { x: currentSnapCandidate.x, y: currentSnapCandidate.y } : mousePos;
+        if (dimP1 && dist(dimP1, snap) > 8) {
+          createAutoDimension(dimP1, snap);
+        } else {
+          isInteracting = false;
+          interactionMode = null;
+          render();
+        }
+        return;
+      }
+
+      if (!isInteracting) return;
+      isInteracting = false;
+
+      if (interactionMode === 'draw') {
+        recordState();
+        if (currentTool === 'line' && startPoint) {
+          const endP = orthoSnap ? snapPointOrtho(startPoint, mousePos) : mousePos;
+          if (dist(startPoint, endP) > 5) {
+            const s = { id: Date.now(), type: 'line', p1: startPoint, p2: endP, color: activeColor, thickness: strokeThickness };
+            shapes.push(s);
+            selectedShape = s;
+          }
+          startPoint = null;
+        } else if (currentTool === 'arrow' && startPoint) {
+          const endP = orthoSnap ? snapPointOrtho(startPoint, mousePos) : mousePos;
+          if (dist(startPoint, endP) > 5) {
+            const s = { id: Date.now(), type: 'arrow', p1: startPoint, p2: endP, color: activeColor, thickness: strokeThickness };
+            shapes.push(s);
+            selectedShape = s;
+          }
+          startPoint = null;
+        } else if (currentTool === 'triangle' && startPoint) {
+          const endP = orthoSnap ? snapPointOrtho(startPoint, mousePos) : mousePos;
+          if (dist(startPoint, endP) > 5) {
+            const s = { id: Date.now(), type: 'triangle', p1: startPoint, p2: endP, color: activeColor, thickness: strokeThickness, filled: triangleFilled };
+            shapes.push(s);
+            selectedShape = s;
+          }
+          startPoint = null;
+        } else if (currentTool === 'autosnap' && currentPoints.length > 2) {
+          const recognizedPoints = recognizeAndSnapProfile(currentPoints);
+          const s = { id: Date.now(), type: 'polyline', points: recognizedPoints, color: activeColor, thickness: strokeThickness, filletRadius: filletRadius };
+          shapes.push(s);
+          selectedShape = s;
+          currentPoints = [];
+        } else if (currentTool === 'smooth' && currentPoints.length > 2) {
+          const smoothed = smoothRawPoints(currentPoints);
+          const s = { id: Date.now(), type: 'smooth', points: smoothed, color: activeColor, thickness: strokeThickness };
+          shapes.push(s);
+          selectedShape = s;
+          currentPoints = [];
+        }
+      }
+
+      interactionMode = null;
+      activeHandle = null;
+      initialShapeSnapshot = null;
+      render();
+    });
+
+    // Update Floating Menu
+    function updateFloatingMenu() {
+      if (!selectedShape || (currentTool !== 'select' && currentTool !== 'dimension')) {
+        floatingMenu.style.display = 'none';
+        return;
+      }
+
+      const b = getShapeBounds(selectedShape);
+      if (!b) { floatingMenu.style.display = 'none'; return; }
+
+      floatingMenu.style.display = 'flex';
+      floatingMenu.style.left = `${Math.min(window.innerWidth - 320, Math.max(20, b.x + b.width / 2 - 120))}px`;
+      floatingMenu.style.top = `${Math.max(60, b.y - 42)}px`;
+
+      document.getElementById('fBtnEditPoints').style.display = (selectedShape.points && selectedShape.points.length > 0) ? 'inline-block' : 'none';
+      document.getElementById('fBtnEditPoints').innerText = editPointsMode ? '✔ Done Points' : '📍 Edit Points';
+
+      const flipBtn = document.getElementById('fBtnFlipDimArrows');
+      const dimModeBtn = document.getElementById('fBtnDimMode');
+      if (selectedShape.type === 'dimension') {
+        flipBtn.style.display = 'inline-block';
+        const isCurInward = selectedShape.arrowDir === 'inward';
+        flipBtn.innerText = isCurInward ? '🏹 Arrows: Inward' : '🏹 Arrows: Outward';
+
+        dimModeBtn.style.display = 'inline-block';
+        const curType = selectedShape.dimType || 'aligned';
+        dimModeBtn.innerText = `📐 ${curType.toUpperCase()} (Cycle)`;
+      } else {
+        flipBtn.style.display = 'none';
+        dimModeBtn.style.display = 'none';
+      }
+    }
+
+    // Floating Menu Handlers
+    document.getElementById('fBtnEditPoints').onclick = () => {
+      editPointsMode = !editPointsMode;
+      render();
+    };
+
+    document.getElementById('fBtnDimMode').onclick = () => {
+      if (!selectedShape || selectedShape.type !== 'dimension') return;
+      recordState();
+      const types = ['aligned', 'horizontal', 'vertical'];
+      const nextIdx = (types.indexOf(selectedShape.dimType || 'aligned') + 1) % types.length;
+      selectedShape.dimType = types[nextIdx];
+      dimType = selectedShape.dimType;
+      document.getElementById('dimTypeSelect').value = selectedShape.dimType;
+      updateFloatingMenu();
+      render();
+    };
+
+    document.getElementById('fBtnFlipDimArrows').onclick = () => {
+      if (!selectedShape || selectedShape.type !== 'dimension') return;
+      recordState();
+      selectedShape.arrowDir = (selectedShape.arrowDir === 'inward') ? 'outward' : 'inward';
+      dimArrowDir = selectedShape.arrowDir;
+      document.getElementById('dimArrowDir').value = dimArrowDir;
+      updateFloatingMenu();
+      render();
+    };
+
+    document.getElementById('fBtnDuplicate').onclick = duplicateSelectedShape;
+    document.getElementById('btnDuplicate').onclick = duplicateSelectedShape;
+
+    document.getElementById('fBtnDelete').onclick = () => {
+      if (!selectedShape) return;
+      recordState();
+      shapes = shapes.filter(s => s.id !== selectedShape.id);
+      selectedShape = null;
+      render();
+    };
+
+    // --- Toolbar Handlers ---
+    function setActiveTool(tool) {
+      currentTool = tool;
+      document.querySelectorAll('.toolbar-group .btn').forEach(b => b.classList.remove('active'));
+      dimStep = 0; dimP1 = null; dimP2 = null;
+
+      if (tool === 'select') {
+        document.getElementById('toolSelect').classList.add('active');
+        statusHint.innerHTML = "👆 <b>Select & Move Mode:</b> Click any shape to drag/move, resize via 8 handles, or edit individual vertices.";
+      } else if (tool === 'autosnap') {
+        document.getElementById('toolAutoSnap').classList.add('active');
+        statusHint.innerHTML = "⚡ <b>Auto-Snap:</b> Draw rapidly. Snaps to clean CAD flanges and bend radii.";
+      } else if (tool === 'smooth') {
+        document.getElementById('toolSmooth').classList.add('active');
+        statusHint.innerHTML = "〰️ <b>Smooth Curve:</b> Freehand jitter-stabilized sketch.";
+      } else if (tool === 'line') {
+        document.getElementById('toolLine').classList.add('active');
+        statusHint.innerHTML = "📏 <b>Line Tool:</b> Drag to draw straight lines (snaps 0°/90°/45°).";
+      } else if (tool === 'arrow') {
+        document.getElementById('toolArrow').classList.add('active');
+        statusHint.innerHTML = "➡️ <b>Arrow Tool:</b> Drag to draw engineering datum and callout arrows.";
+      } else if (tool === 'triangle') {
+        document.getElementById('toolTriangle').classList.add('active');
+        statusHint.innerHTML = "🔺 <b>Triangle Tool:</b> Drag to place datum triangles and alignment markers.";
+      } else if (tool === 'dimension') {
+        document.getElementById('toolDim').classList.add('active');
+        dimStep = 0; dimP1 = null; dimP2 = null;
+        statusHint.innerHTML = "📐 <b>CAD Dimension:</b> Snap between 2 points (vertices, edges, or ⟂) to auto-create presentation lines & arrows. (Press Esc to cancel)";
+      }
+      render();
+    }
+
+    document.getElementById('toolSelect').onclick = () => setActiveTool('select');
+    document.getElementById('toolAutoSnap').onclick = () => setActiveTool('autosnap');
+    document.getElementById('toolSmooth').onclick = () => setActiveTool('smooth');
+    document.getElementById('toolLine').onclick = () => setActiveTool('line');
+    document.getElementById('toolArrow').onclick = () => setActiveTool('arrow');
+    document.getElementById('toolTriangle').onclick = () => setActiveTool('triangle');
+    document.getElementById('toolDim').onclick = () => setActiveTool('dimension');
+
+    document.getElementById('btnUndo').onclick = undo;
+    document.getElementById('btnRedo').onclick = redo;
+
+    document.getElementById('btnClear').onclick = () => {
+      if (shapes.length === 0) return;
+      if (confirm('Clear the entire canvas?')) {
+        recordState();
+        shapes = [];
+        selectedShape = null;
+        render();
+      }
+    };
+
+    document.getElementById('dimTypeSelect').onchange = (e) => {
+      dimType = e.target.value;
+      if (selectedShape && selectedShape.type === 'dimension') {
+        recordState();
+        if (dimType === 'auto') {
+          const dx = Math.abs(selectedShape.p2.x - selectedShape.p1.x);
+          const dy = Math.abs(selectedShape.p2.y - selectedShape.p1.y);
+          selectedShape.dimType = (dy < 6) ? 'horizontal' : (dx < 6 ? 'vertical' : 'aligned');
+        } else {
+          selectedShape.dimType = dimType;
+        }
+        render();
+        updateFloatingMenu();
+      }
+    };
+    document.getElementById('dimArrowDir').onchange = (e) => {
+      dimArrowDir = e.target.value;
+      if (selectedShape && selectedShape.type === 'dimension') {
+        recordState();
+        selectedShape.arrowDir = dimArrowDir;
+        render();
+      }
+    };
+    document.getElementById('dimLineThick').onchange = (e) => {
+      dimLineWidth = parseFloat(e.target.value) || 2.5;
+      if (selectedShape && selectedShape.type === 'dimension') {
+        recordState();
+        selectedShape.lineWidth = dimLineWidth;
+        render();
+      }
+    };
+    document.getElementById('dimStubThick').onchange = (e) => {
+      dimStubWidth = e.target.value;
+      const val = (dimStubWidth === 'auto') ? strokeThickness : (parseFloat(dimStubWidth) || 4);
+      if (selectedShape && selectedShape.type === 'dimension') {
+        recordState();
+        selectedShape.stubThickness = val;
+        render();
+      }
+    };
+    document.getElementById('dimScale').oninput = (e) => {
+      dimScale = Math.max(1, parseFloat(e.target.value) || 10);
+      if (selectedShape && selectedShape.type === 'dimension') {
+        recordState();
+        selectedShape.scale = dimScale;
+        render();
+      }
+    };
+
+    document.getElementById('orthoSnap').onchange = (e) => { orthoSnap = e.target.checked; };
+    document.getElementById('showGrid').onchange = (e) => { showGrid = e.target.checked; render(); };
+    document.getElementById('triangleFilled').onchange = (e) => {
+      triangleFilled = e.target.checked;
+      if (selectedShape && selectedShape.type === 'triangle') {
+        recordState();
+        selectedShape.filled = triangleFilled;
+        render();
+      }
+    };
+
+    // Keyboard Shortcuts (Esc cancels/exits, Arrow keys nudge, Ctrl+D duplicate, Ctrl+Z undo)
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (e.target && typeof e.target.blur === 'function') e.target.blur();
+        isInteracting = false;
+        interactionMode = null;
+        activeHandle = null;
+        startPoint = null;
+        currentPoints = [];
+        dimStep = 0;
+        dimP1 = null;
+        dimP2 = null;
+        currentSnapCandidate = null;
+        editPointsMode = false;
+        selectedShape = null;
+        if (floatingMenu) floatingMenu.style.display = 'none';
+        setActiveTool('select');
+        statusHint.innerHTML = "👆 <b>Select Mode:</b> Click any shape to select, or pick a tool above.";
+        render();
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault(); undo();
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'Z'))) {
+        e.preventDefault(); redo();
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+        e.preventDefault(); duplicateSelectedShape();
+      } else if (e.key === 'v' || e.key === 'V') {
+        setActiveTool('select');
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedShape) {
+          recordState();
+          shapes = shapes.filter(s => s.id !== selectedShape.id);
+          selectedShape = null;
+          render();
+        }
+      } else if (selectedShape && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 2;
+        let dx = 0, dy = 0;
+        if (e.key === 'ArrowUp') dy = -step;
+        if (e.key === 'ArrowDown') dy = step;
+        if (e.key === 'ArrowLeft') dx = -step;
+        if (e.key === 'ArrowRight') dx = step;
+
+        recordState();
+        if (selectedShape.type === 'dimension') {
+          if (selectedShape.standoff) {
+            selectedShape.standoff.x += dx;
+            selectedShape.standoff.y += dy;
+          }
+          render();
+          return;
+        }
+        if (selectedShape.points) selectedShape.points.forEach(p => { p.x += dx; p.y += dy; });
+        if (selectedShape.innerPoints) selectedShape.innerPoints.forEach(p => { p.x += dx; p.y += dy; });
+        if (selectedShape.p1 && selectedShape.p2) {
+          selectedShape.p1.x += dx; selectedShape.p1.y += dy;
+          selectedShape.p2.x += dx; selectedShape.p2.y += dy;
+        }
+        render();
+      }
+    });
+
+    // --- Vector SVG & High-Res PNG Export ---
+    document.getElementById('btnExportPNG').onclick = () => {
+      const link = document.createElement('a');
+      link.download = `gap_flush_presentation_${Date.now()}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    };
+
+    document.getElementById('btnExportSVG').onclick = () => {
+      const dpr = window.devicePixelRatio || 1;
+      const w = canvas.width / dpr;
+      const h = canvas.height / dpr;
+
+      let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">\n`;
+      svgContent += `  <rect width="100%" height="100%" fill="#131317" />\n`;
+
+      shapes.forEach(shape => {
+        const th = shape.thickness || 4;
+        if (shape.isSolid && shape.innerPoints) {
+          let pathD = shape.points.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+          pathD += ` ` + [...shape.innerPoints].reverse().map(p => `L ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ') + ` Z`;
+          svgContent += `  <path d="${pathD}" fill="${shape.color}" fill-opacity="0.25" stroke="${shape.color}" stroke-width="2" />\n`;
+        } else if (shape.type === 'line') {
+          svgContent += `  <line x1="${shape.p1.x}" y1="${shape.p1.y}" x2="${shape.p2.x}" y2="${shape.p2.y}" stroke="${shape.color}" stroke-width="${th}" stroke-linecap="round" />\n`;
+        } else if (shape.type === 'arrow') {
+          const dx = shape.p2.x - shape.p1.x;
+          const dy = shape.p2.y - shape.p1.y;
+          const angle = Math.atan2(dy, dx);
+          const headLen = Math.max(12, th * 3.5);
+          svgContent += `  <line x1="${shape.p1.x}" y1="${shape.p1.y}" x2="${shape.p2.x}" y2="${shape.p2.y}" stroke="${shape.color}" stroke-width="${th}" stroke-linecap="round" />\n`;
+          const a1x = shape.p2.x - headLen * Math.cos(angle - Math.PI / 7);
+          const a1y = shape.p2.y - headLen * Math.sin(angle - Math.PI / 7);
+          const a2x = shape.p2.x - headLen * Math.cos(angle + Math.PI / 7);
+          const a2y = shape.p2.y - headLen * Math.sin(angle + Math.PI / 7);
+          svgContent += `  <polygon points="${shape.p2.x},${shape.p2.y} ${a1x},${a1y} ${a2x},${a2y}" fill="${shape.color}" />\n`;
+        } else if (shape.type === 'triangle') {
+          const dx = shape.p2.x - shape.p1.x;
+          const dy = shape.p2.y - shape.p1.y;
+          const side = Math.hypot(dx, dy);
+          const angle = Math.atan2(dy, dx);
+          const baseHalf = side * 0.577;
+          const perpAngle = angle + Math.PI / 2;
+          const b1x = shape.p1.x + baseHalf * Math.cos(perpAngle);
+          const b1y = shape.p1.y + baseHalf * Math.sin(perpAngle);
+          const b2x = shape.p1.x - baseHalf * Math.cos(perpAngle);
+          const b2y = shape.p1.y - baseHalf * Math.sin(perpAngle);
+          const fillAttr = shape.filled ? `fill="${shape.color}"` : `fill="none"`;
+          svgContent += `  <polygon points="${shape.p2.x},${shape.p2.y} ${b1x},${b1y} ${b2x},${b2y}" ${fillAttr} stroke="${shape.color}" stroke-width="${th}" />\n`;
+        } else if (shape.points && shape.points.length > 1) {
+          const pathD = shape.points.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+          svgContent += `  <path d="${pathD}" fill="none" stroke="${shape.color}" stroke-width="${th}" stroke-linecap="round" stroke-linejoin="round" />\n`;
+        } else if (shape.type === 'dimension') {
+          const p1 = shape.p1, p2 = shape.p2;
+          const standoff = shape.standoff || p2;
+          const type = getEffectiveDimType(shape, standoff);
+          const arrowDir = shape.arrowDir || 'auto';
+          const scale = shape.scale || 10;
+          const color = shape.color || '#10b981';
+
+          if (type === 'aligned') {
+            const dx = p2.x - p1.x, dy = p2.y - p1.y;
+            const L = Math.hypot(dx, dy);
+            if (L > 1) {
+              const ux = dx / L, uy = dy / L;
+              const nx = -uy, ny = ux;
+              let h = (standoff.x - p1.x) * nx + (standoff.y - p1.y) * ny;
+              if (Math.abs(h) < 12) h = h >= 0 ? 25 : -25;
+              const D1 = { x: p1.x + h * nx, y: p1.y + h * ny };
+              const D2 = { x: p2.x + h * nx, y: p2.y + h * ny };
+              const sgn = Math.sign(h) || 1;
+              const theta = Math.atan2(dy, dx);
+              const isOutward = (arrowDir === 'outward' || (arrowDir === 'auto' && L >= 48));
+
+              svgContent += `  <line x1="${p1.x + 3*sgn*nx}" y1="${p1.y + 3*sgn*ny}" x2="${D1.x + 5*sgn*nx}" y2="${D1.y + 5*sgn*ny}" stroke="rgba(255,255,255,0.4)" stroke-width="1" />\n`;
+              svgContent += `  <line x1="${p2.x + 3*sgn*nx}" y1="${p2.y + 3*sgn*ny}" x2="${D2.x + 5*sgn*nx}" y2="${D2.y + 5*sgn*ny}" stroke="rgba(255,255,255,0.4)" stroke-width="1" />\n`;
+
+              if (isOutward) {
+                svgContent += `  <line x1="${D1.x}" y1="${D1.y}" x2="${D2.x}" y2="${D2.y}" stroke="${color}" stroke-width="1.5" />\n`;
+              } else {
+                svgContent += `  <line x1="${D1.x - 16*ux}" y1="${D1.y - 16*uy}" x2="${D2.x + 16*ux}" y2="${D2.y + 16*uy}" stroke="${color}" stroke-width="1.5" />\n`;
+              }
+
+              const aLen = 9, aW = 3.6;
+              const a1Angle = isOutward ? theta + Math.PI : theta;
+              const a2Angle = isOutward ? theta : theta + Math.PI;
+              const mkArr = (tx, ty, ang) => {
+                const bx = tx - aLen * Math.cos(ang), by = ty - aLen * Math.sin(ang);
+                const px = Math.cos(ang + Math.PI/2), py = Math.sin(ang + Math.PI/2);
+                return `${tx.toFixed(1)},${ty.toFixed(1)} ${(bx + aW*px).toFixed(1)},${(by + aW*py).toFixed(1)} ${(bx - aW*px).toFixed(1)},${(by - aW*py).toFixed(1)}`;
+              };
+              svgContent += `  <polygon points="${mkArr(D1.x, D1.y, a1Angle)}" fill="${color}" />\n`;
+              svgContent += `  <polygon points="${mkArr(D2.x, D2.y, a2Angle)}" fill="${color}" />\n`;
+
+              const midX = (D1.x + D2.x) / 2, midY = (D1.y + D2.y) / 2;
+              const valText = `${(L / scale).toFixed(1)} mm`;
+              svgContent += `  <rect x="${midX - 25}" y="${midY - 8}" width="50" height="16" fill="#131317" stroke="${color}" stroke-width="1" rx="2" />\n`;
+              svgContent += `  <text x="${midX}" y="${midY + 4}" fill="${color}" font-size="11" font-weight="bold" text-anchor="middle">${valText}</text>\n`;
+            }
+          } else {
+            const dx = Math.abs(p2.x - p1.x), dy = Math.abs(p2.y - p1.y);
+            svgContent += `  <line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p1.y}" stroke="#10b981" stroke-width="2" />\n`;
+            svgContent += `  <line x1="${p2.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="#f43f5e" stroke-width="2" />\n`;
+            svgContent += `  <text x="${(p1.x + p2.x)/2}" y="${p1.y - 6}" fill="#10b981" font-size="11" font-weight="bold" text-anchor="middle">Gap: ${(dx/scale).toFixed(1)}mm</text>\n`;
+            svgContent += `  <text x="${p2.x + 8}" y="${(p1.y + p2.y)/2 + 4}" fill="#f43f5e" font-size="11" font-weight="bold">Flush: ${(dy/scale).toFixed(1)}mm</text>\n`;
+          }
+        }
+      });
+
+      svgContent += `</svg>`;
+
+      const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = `gap_flush_presentation_${Date.now()}.svg`;
+      link.href = url;
+      link.click();
+      URL.revokeObjectURL(url);
+    };
+
+    resizeCanvas();
+  </script>
+</body>
+</html>
